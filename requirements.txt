@@ -12,3 +12,5 @@ scipy
 fastapi
 uvicorn
 pydantic
+celery[redis]
+redis

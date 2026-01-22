@@ -12,13 +12,14 @@ export async function fetchThemes(): Promise<Theme[]> {
     }
 }
 
-// Helper to parse SSE format roughly
+// Helper for Polling Architecture
 export async function generatePoster(
     payload: GenerationRequest,
     onProgress?: (percent: number, text: string) => void,
     signal?: AbortSignal
 ): Promise<GenerationResponse> {
     try {
+        // 1. Submit JSON Task
         const res = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -26,7 +27,7 @@ export async function generatePoster(
             signal
         });
 
-        if (!res.ok || !res.body) {
+        if (!res.ok) {
             return {
                 success: false,
                 files: [],
@@ -34,43 +35,45 @@ export async function generatePoster(
             };
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        const { task_id } = await res.json();
 
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n\n");
-            buffer = lines.pop() || ""; // Keep incomplete chunk
-
-            for (const block of lines) {
-                const eventMatch = block.match(/event: (.*)\n/);
-                const dataMatch = block.match(/data: (.*)/);
-
-                if (eventMatch && dataMatch) {
-                    const type = eventMatch[1].trim();
-                    const dataStr = dataMatch[1];
-                    try {
-                        const data = JSON.parse(dataStr);
-                        if (type === "progress" && onProgress) {
-                            onProgress(data.percent, data.text);
-                        } else if (type === "result") {
-                            return { success: true, files: data.files };
-                        } else if (type === "error") {
-                            return { success: false, files: [], error: data.message };
-                        }
-                    } catch (e) {
-                        console.error("JSON parse error in SSE", e);
-                    }
-                }
-            }
+        if (!task_id) {
+            return { success: false, files: [], error: "Pas de Task ID reçu." };
         }
 
-        // If stream ends without result
-        return { success: false, files: [], error: "Connexion interrompue sans résultat." };
+        // 2. Poll Status
+        while (true) {
+            // Check abort signal
+            if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+            await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+
+            const statusRes = await fetch(`/api/tasks/${task_id}`, { signal });
+            if (!statusRes.ok) continue; // Retry polling on glitch? or fail? Let's continue.
+
+            const task = await statusRes.json();
+
+            if (task.status === 'PROGRESS' || task.status === 'PENDING') {
+                if (onProgress && task.progress) {
+                    onProgress(task.progress.current || 0, task.progress.status || "Traitement...");
+                }
+            } else if (task.status === 'SUCCESS') {
+                // Success!
+                if (onProgress) onProgress(100, "Terminé !");
+                // The result from celery task (tasks.py) contains { success: true, file_url: ... }
+                // Frontend expects { success, files: [] } or something.
+                // My tasks.py returns { success, file_url, ... }
+                // Let's adapt it.
+                const result = task.result;
+                return {
+                    success: true,
+                    files: result.file_url ? [result.file_url.split('/').pop()] : [], // Extract filename
+                    debug: JSON.stringify(result)
+                };
+            } else if (task.status === 'FAILURE') {
+                return { success: false, files: [], error: task.error || "Erreur inconnue" };
+            }
+        }
 
     } catch (e: any) {
         if (e.name === 'AbortError') {
@@ -79,7 +82,7 @@ export async function generatePoster(
         return {
             success: false,
             files: [],
-            error: "Erreur de communication avec le serveur: " + (e.message || "Unknown error")
+            error: "Erreur de communication: " + (e.message || "Unknown error")
         };
     }
 }

@@ -216,6 +216,11 @@
             }
         }, 800);
     }
+    export function fitToPreview() {
+        if (map && previewRect) {
+            map.fitBounds(previewRect.getBounds(), { padding: [50, 50] });
+        }
+    }
 </script>
 
 <div class="map-container" bind:this={mapElement}></div>

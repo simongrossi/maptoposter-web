@@ -1,117 +1,93 @@
 from fastapi import FastAPI, HTTPException
-import uvicorn
-import asyncio
-from pathlib import Path
-from datetime import datetime
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.backends.backend_svg import FigureCanvasSVG
-from matplotlib.backends.backend_pdf import FigureCanvasPdf
+from fastapi.middleware.cors import CORSMiddleware
+from celery.result import AsyncResult
+from typing import Dict, Any
 
 from backend.models import PosterRequest
-from backend.utils import get_coordinates, load_theme, load_fonts
-from backend.fetcher import MapDataFetcher
-from backend.renderer import MapRenderer
+from backend.tasks import generate_poster_task
 
-app = FastAPI(title="MapPoster Generator API")
+app = FastAPI(title="MapPoster Generator API (Async)")
 
-POSTERS_DIR = Path("static/posters")
-POSTERS_DIR.mkdir(parents=True, exist_ok=True)
+# Enable CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict this
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/generate")
-async def generate_poster(request: PosterRequest):
-    try:
-        # 1. Resolve Coordinates
-        lat, lon = await get_coordinates(request.city, request.country)
-        
-        # 2. Config & Theme
-        theme = load_theme(request.style)
-        
-        # Apply color overrides
-        if request.custom_colors:
-            cc = request.custom_colors
-            if cc.bg: theme['bg'] = cc.bg
-            if cc.water: theme['water'] = cc.water
-            if cc.parks: theme['parks'] = cc.parks
-            if cc.text: theme['text'] = cc.text
-            if cc.roads:
-                # Apply unified road color to all types
-                for k in list(theme.keys()):
-                    if k.startswith('road_'):
-                        theme[k] = cc.roads
-        
-        # 3. Fetch Data
-        # Compensate distance for aspect ratio cropping
-        # Logic: fetch enough area to cover the larger dimension
-        aspect = request.width / request.height
-        max_dim = max(request.width, request.height)
-        min_dim = min(request.width, request.height)
-        ratio = max_dim / min_dim
-        compensated_dist = request.distance * ratio
-        
-        # Parallel fetch
-        data = await MapDataFetcher.fetch_all(lat, lon, compensated_dist, request.custom_layers)
-        
-        if not data.get('graph'):
-            raise HTTPException(status_code=404, detail="Could not retrieve map data for this location.")
+async def generate_poster_endpoint(request: PosterRequest):
+    """
+    Enqueue a poster generation task.
+    Returns: {"task_id": "..."}
+    """
+    # Convert model to dict for Celery
+    task = generate_poster_task.delay(request.model_dump())
+    return {"task_id": task.id}
 
-        # 4. Render
-        # Run rendering in thread pool to avoid blocking event loop (Matplotlib is CPU bound)
-        def _render():
-            renderer = MapRenderer(theme)
-            fig = renderer.render(
-                data=data,
-                city=request.city,
-                country=request.country,
-                point=(lat, lon),
-                dist=request.distance,
-                width_in=request.width,
-                height_in=request.height,
-                custom_layers_config=request.custom_layers,
-                text_CONFIG={
-                    'country_label': request.country_label,
-                    'name_label': request.name_label
-                }
-            )
-            return fig
+@app.get("/themes")
+async def get_themes():
+    """
+    List available themes.
+    """
+    # This logic was in fetcher/utils or similar.
+    # Simple reimplementation or import
+    from pathlib import Path
+    import json
+    
+    themes = []
+    themes_dir = Path("themes")
+    if themes_dir.exists():
+        for f in themes_dir.glob("*.json"):
+            try:
+                data = json.loads(f.read_text(encoding='utf-8'))
+                themes.append({
+                    "id": f.stem,
+                    "name": data.get("name", f.stem),
+                    "colors": {
+                        "bg": data.get("bg"),
+                        "road_primary": data.get("road_primary"),
+                        "water": data.get("water")
+                    }
+                })
+            except:
+                pass
+    return {"themes": themes}
 
-        fig = await asyncio.to_thread(_render)
+@app.get("/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """
+    Get the status of a generation task.
+    """
+    task_result = AsyncResult(task_id)
+    
+    response = {
+        "task_id": task_id,
+        "status": task_result.status,
+        "result": None,
+        "error": None
+    }
 
-        # 5. Save
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_city = request.city.lower().replace(" ", "_")
-        filename = f"{safe_city}_{request.style}_{timestamp}.{request.format.lower()}"
-        output_path = POSTERS_DIR / filename
+    if task_result.state == 'PENDING':
+        response["status"] = "PENDING"
+        response["progress"] = {"current": 0, "total": 100, "status": "Pending..."}
         
-        def _save():
-            fmt = request.format.lower()
-            if fmt == 'svg':
-                canvas = FigureCanvasSVG(fig)
-            elif fmt == 'pdf':
-                canvas = FigureCanvasPdf(fig)
-            else:
-                canvas = FigureCanvasAgg(fig)
-            
-            # dpi=300 for high quality
-            canvas.print_figure(str(output_path), dpi=300, bbox_inches='tight', pad_inches=0.05, facecolor=theme['bg'])
-            # Clean up memory
-            import matplotlib.pyplot as plt
-            plt.close(fig) 
-            # Note: since we used Figure() directly, plt.close(fig) might check global state manager, 
-            # but explicit del or clear is good. Figure objects don't register to pyplot unless asked.
-            # Using FigureCanvasAgg print_figure is safe.
-
-        await asyncio.to_thread(_save)
+    elif task_result.state == 'PROGRESS':
+        response["status"] = "PROGRESS"
+        response["progress"] = task_result.info # Contains 'current', 'total', 'status'
         
-        return {
-            "success": True, 
-            "file_url": f"/posters/{filename}", 
-            "file_path": str(output_path)
-        }
+    elif task_result.state == 'SUCCESS':
+        response["status"] = "SUCCESS"
+        response["result"] = task_result.result
+        response["progress"] = {"current": 100, "total": 100, "status": "Completed"}
+        
+    elif task_result.state == 'FAILURE':
+        response["status"] = "FAILURE"
+        response["error"] = str(task_result.info)
+        
+    return response
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+# Legacy Stream Endpoint (Removed/Deprecated)
+# The frontend must migrate to polling /tasks/{id}
