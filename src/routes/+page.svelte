@@ -1,6 +1,13 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
     import MapSelector from "$lib/components/MapSelector.svelte";
+    import type { Theme, GenerationRequest, GenerationResponse } from "$lib/types";
+    import { fetchThemes, generatePoster } from "$lib/api";
+
+    // Interfaces
+    interface MapComponent {
+        flyToLocation: (query: string) => void;
+    }
 
     // State
     let city = "Paris";
@@ -12,32 +19,24 @@
     // Options
     let allThemes = false;
     let selectedTheme = "";
-    let themes: any[] = [];
+    let themes: Theme[] = [];
 
     // App State
     let loading = false;
     let generatedFiles: string[] = [];
     let errorMsg = "";
     let debugInfo = "";
-    let mapComponent: any;
+    let mapComponent: MapComponent;
 
     // Debounce for forward geocoding
-    let searchTimeout: any;
+    let searchTimeout: ReturnType<typeof setTimeout>;
 
     onMount(async () => {
-        // Load themes
-        try {
-            const res = await fetch("/api/themes");
-            const data = await res.json();
-            if (data.themes) {
-                themes = data.themes;
-                // Default to 'noir' or first one
-                const defaultTheme =
-                    themes.find((t) => t.id === "noir") || themes[0];
-                if (defaultTheme) selectedTheme = defaultTheme.id;
-            }
-        } catch (e) {
-            console.error("Failed to fetch themes", e);
+        themes = await fetchThemes();
+        if (themes.length > 0) {
+            // Default to 'noir' or first one
+            const defaultTheme = themes.find((t) => t.id === "noir") || themes[0];
+            if (defaultTheme) selectedTheme = defaultTheme.id;
         }
     });
 
@@ -85,33 +84,26 @@
         debugInfo = "";
         generatedFiles = [];
 
-        try {
-            const res = await fetch("/api/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    city,
-                    country,
-                    name: name || undefined,
-                    countryLabel: countryLabel || undefined,
-                    distance,
-                    theme: !allThemes ? selectedTheme : undefined,
-                    allThemes: allThemes,
-                }),
-            });
-            const result = await res.json();
+        const payload: GenerationRequest = {
+            city,
+            country,
+            name: name || undefined,
+            countryLabel: countryLabel || undefined,
+            distance,
+            theme: !allThemes ? selectedTheme : undefined,
+            allThemes: allThemes,
+        };
 
-            if (result.success) {
-                generatedFiles = result.files;
-            } else {
-                errorMsg = result.error || "Une erreur est survenue.";
-                if (result.debug) debugInfo = result.debug;
-            }
-        } catch (e: any) {
-            errorMsg = "Erreur de communication avec le serveur: " + e.message;
-        } finally {
-            loading = false;
+        const result = await generatePoster(payload);
+
+        if (result.success) {
+            generatedFiles = result.files;
+        } else {
+            errorMsg = result.error || "Une erreur est survenue.";
+            if (result.debug) debugInfo = result.debug;
         }
+
+        loading = false;
     }
 </script>
 

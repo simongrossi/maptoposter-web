@@ -691,16 +691,21 @@ Examples:
     print("=" * 50)
 
     # Get coordinates and generate poster
+    generated_files = []
     try:
         coords = get_coordinates(args.city, args.country)
         for theme_name in themes_to_generate:
             THEME = load_theme(theme_name)
             output_file = generate_output_filename(args.city, theme_name, args.format)
             create_poster(args.city, args.country, coords, args.distance, output_file, args.format, args.width, args.height, country_label=args.country_label)
+            generated_files.append(os.path.basename(output_file))
 
         print("\n" + "=" * 50)
         print("✓ Poster generation complete!")
         print("=" * 50)
+        
+        # Output for machine parsing
+        print(f"__JSON_RESULT_FILES__:{json.dumps(generated_files)}")
 
     except Exception as e:
         print(f"\n✗ Error: {e}")

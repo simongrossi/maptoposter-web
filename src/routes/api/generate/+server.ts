@@ -33,31 +33,16 @@ export const POST: RequestHandler = async ({ request }) => {
             args.push('--country-label', countryLabel);
         }
 
-        // Capture files before
+        // Ensure output directory exists
         const postersDir = path.resolve('static/posters');
         if (!fs.existsSync(postersDir)) fs.mkdirSync(postersDir, { recursive: true });
 
-        const filesBefore = fs.readdirSync(postersDir);
-
         return new Promise((resolve) => {
-            // Try to get python path from env, or fallback
-            // Note: In SvelteKit, process.env isn't always fully populated in dev without $env/dynamic/private
-            // We'll try to use the one from .env if possible via a direct check or standard PATH resolution
-            let pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-
-            // Hardcoded fallback for this specific user environment if needed, 
-            // but ideally we rely on the process.env if loaded.
-            // Since we can't easily import $env/dynamic/private dynamically in a replace block without adding imports atop,
-            // we will stick to a robust check.
-
-            // However, we just wrote a .env file. Vite loads it into process.env in dev mode usually.
-            if (process.env.PYTHON_PATH) {
-                pythonCmd = process.env.PYTHON_PATH;
-            } else {
-                // Extreme fallback for the specific user case found:
-                if (fs.existsSync("C:\\Users\\simongrossi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe")) {
-                    pythonCmd = "C:\\Users\\simongrossi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
-                }
+            // Determine Python executable
+            // Priority: Env var -> python (win) -> python3 (unix)
+            let pythonCmd = process.env.PYTHON_PATH;
+            if (!pythonCmd) {
+                pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
             }
 
             const processRef = spawn(pythonCmd, args, {
@@ -65,15 +50,17 @@ export const POST: RequestHandler = async ({ request }) => {
                 env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
             });
 
+            let stdoutData = '';
             let stderrData = '';
+
+            processRef.stdout.on('data', (data: Buffer) => {
+                const str = data.toString();
+                stdoutData += str;
+                console.log(str); // Log for server debugging
+            });
 
             processRef.stderr.on('data', (data: Buffer) => {
                 stderrData += data.toString();
-            });
-
-            processRef.stdout.on('data', (data: Buffer) => {
-                // Optional: log stdout
-                console.log(data.toString());
             });
 
             processRef.on('close', (code: number) => {
@@ -82,20 +69,30 @@ export const POST: RequestHandler = async ({ request }) => {
                     resolve(json({
                         success: false,
                         error: "Le script a échoué (code " + code + ").",
-                        debug: stderrData || "Aucune sortie d'erreur (stderr est vide)."
+                        debug: stderrData || "Aucune sortie d'erreur."
                     }, { status: 500 }));
                     return;
                 }
 
-                const filesAfter = fs.readdirSync(postersDir);
-                const newFiles = filesAfter.filter((f: string) => !filesBefore.includes(f));
+                // Parse output for filenames
+                const match = stdoutData.match(/__JSON_RESULT_FILES__:(.*)/);
+                let newFiles: string[] = [];
+
+                if (match && match[1]) {
+                    try {
+                        newFiles = JSON.parse(match[1]);
+                    } catch (e) {
+                        console.error("Failed to parse JSON result from python script");
+                    }
+                }
 
                 if (newFiles.length === 0) {
+                    // Fallback or error if no files reported
                     resolve(json({
                         success: false,
-                        error: "Aucun fichier détecté après exécution.",
-                        debug: "Sortie stderr: " + stderrData
-                    })); // Not a 500, technically it ran but didn't produce files
+                        error: "Aucun fichier généré n'a été signalé par le script.",
+                        debug: "Sortie stdout: " + stdoutData
+                    }));
                     return;
                 }
 
@@ -103,7 +100,7 @@ export const POST: RequestHandler = async ({ request }) => {
             });
 
             processRef.on('error', (err: Error) => {
-                resolve(json({ success: false, error: "Failed to spawn process: " + err.message }, { status: 500 }));
+                resolve(json({ success: false, error: "Impossible de lancer le processus Python: " + err.message + ". Vérifiez que Python est installé et accessible." }, { status: 500 }));
             });
         });
 
