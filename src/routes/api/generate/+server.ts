@@ -2,6 +2,7 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { env } from '$env/dynamic/private';
 
 export const POST: RequestHandler = async ({ request }) => {
     try {
@@ -40,7 +41,8 @@ export const POST: RequestHandler = async ({ request }) => {
         return new Promise((resolve) => {
             // Determine Python executable
             // Priority: Env var -> python (win) -> python3 (unix)
-            let pythonCmd = process.env.PYTHON_PATH;
+            // Use SvelteKit's dynamic env access
+            let pythonCmd = env.PYTHON_PATH;
             if (!pythonCmd) {
                 pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
             }
