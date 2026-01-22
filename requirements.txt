@@ -1,0 +1,11 @@
+
+matplotlib
+networkx
+osmnx
+numpy
+geopy
+tqdm
+fiona
+shapely
+geopandas
+scipy

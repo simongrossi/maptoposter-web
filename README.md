@@ -1,16 +1,42 @@
-# maptoposter-web
+# sv
 
-Interface web (SvelteKit + TypeScript + Docker) pour faciliter l'utilisation
-du script [maptoposter](https://github.com/originalankur/maptoposter) d'Ankur.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## À propos du projet original
+## Creating a project
 
-Ce projet repose sur le script `create_map_poster.py` issu du dépôt :
-https://github.com/originalankur/maptoposter
+If you're seeing this, you've probably already done this step. Congrats!
 
-Le code original est sous licence MIT (voir `maptoposter/LICENSE`).
-Tout le mérite pour la génération des affiches de cartes lui revient.
+```sh
+# create a new project
+npx sv create my-app
+```
 
-## Ce que ce projet ajoute
+To recreate this project with the same configuration:
 
-- Une interface web simple (
+```sh
+# recreate this project
+npx sv create --template minimal --types ts --no-install app
+```
+
+## Developing
+
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+
+```sh
+npm run dev
+
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
+
+## Building
+
+To create a production version of your app:
+
+```sh
+npm run build
+```
+
+You can preview the production build with `npm run preview`.
+
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
