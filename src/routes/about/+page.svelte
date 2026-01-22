@@ -45,8 +45,13 @@
                 <h3>Librairies Python</h3>
                 <ul class="libs-list">
                     <li>
-                        <strong>OSMnx</strong> & <strong>NetworkX</strong> pour l'analyse
-                        de réseaux
+                        <strong
+                            ><a
+                                href="https://github.com/gboeing/osmnx"
+                                target="_blank">OSMnx</a
+                            ></strong
+                        >
+                        & <strong>NetworkX</strong> pour l'analyse de réseaux
                     </li>
                     <li><strong>Matplotlib</strong> pour le rendu graphique</li>
                 </ul>

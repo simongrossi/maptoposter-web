@@ -19,7 +19,11 @@
     let country = "France";
     let name = "";
     let countryLabel = "";
+
     let distance = 10000;
+
+    // Export State
+    let exportFormat = "png";
 
     // Options
     let allThemes = false;
@@ -45,6 +49,23 @@
             label: "Métro",
             tags: { railway: "subway" },
             color: "#e74c3c",
+            enabled: false,
+            width: 1.5,
+        },
+        {
+            label: "Forêts & Nature",
+            tags: {
+                natural: ["wood", "scrub", "tree_row"],
+                landuse: ["forest", "orchard"],
+            },
+            color: "#27ae60",
+            enabled: false,
+            width: 0.5, // Filled polygons don't really use width but good for boundaries
+        },
+        {
+            label: "Fleuves & Rivières",
+            tags: { waterway: ["river", "stream", "canal"] },
+            color: "#2980b9",
             enabled: false,
             width: 1.5,
         },
@@ -152,6 +173,7 @@
             allThemes: allThemes,
             customLayers: customLayers, // Send custom layers
             customColors: customColorsEnabled ? customColors : undefined,
+            format: exportFormat,
         };
 
         const result = await generatePoster(
@@ -309,7 +331,7 @@
                 <h3><span class="icon">🛤️</span> Couches Sup.</h3>
 
                 {#each customLayers as layer}
-                    <div class="layer-group">
+                    <div class="layer-control">
                         <div class="form-group checkbox-group">
                             <label class="toggle">
                                 <input
@@ -321,15 +343,54 @@
                             </label>
                         </div>
                         {#if layer.enabled}
-                            <input
-                                type="color"
-                                bind:value={layer.color}
-                                class="color-picker"
-                                title="Couleur de la couche"
-                            />
+                            <div class="layer-settings">
+                                <input
+                                    type="color"
+                                    bind:value={layer.color}
+                                    class="color-picker"
+                                    title="Couleur"
+                                />
+                                <div
+                                    class="width-control"
+                                    title="Taille / Épaisseur du trait"
+                                >
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="5"
+                                        step="0.5"
+                                        bind:value={layer.width}
+                                    />
+                                    <span class="value">{layer.width}</span>
+                                </div>
+                            </div>
                         {/if}
                     </div>
                 {/each}
+            </div>
+
+            <!-- Export Options -->
+            <div class="section">
+                <h3><span class="icon">💾</span> Export</h3>
+                <div class="form-group">
+                    <label>Format de fichier</label>
+                    <div class="format-idx">
+                        {#each ["png", "svg", "pdf"] as f}
+                            <label
+                                class="radio-card {exportFormat === f
+                                    ? 'active'
+                                    : ''}"
+                            >
+                                <input
+                                    type="radio"
+                                    bind:group={exportFormat}
+                                    value={f}
+                                />
+                                {f.toUpperCase()}
+                            </label>
+                        {/each}
+                    </div>
+                </div>
             </div>
 
             <!-- Customization Section -->
@@ -872,5 +933,84 @@
         cursor: pointer;
         padding: 0;
         background: none;
+    }
+
+    /* Layer Controls */
+    .layer-control {
+        margin-bottom: 12px;
+    }
+
+    .layer-settings {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 8px;
+        margin-left: 52px; /* Align with text */
+        background: #25262b;
+        padding: 8px;
+        border-radius: 6px;
+    }
+
+    .layer-settings .color-picker {
+        width: 32px;
+        height: 32px;
+        border: none;
+        padding: 0;
+        background: none;
+        cursor: pointer;
+    }
+
+    .width-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .width-control input[type="range"] {
+        flex: 1;
+        height: 4px;
+    }
+
+    .width-control .value {
+        font-size: 0.75rem;
+        color: #909296;
+        min-width: 24px;
+        text-align: right;
+    }
+
+    /* Format Selector */
+    .format-idx {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .radio-card {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        background: #373a40;
+        border: 1px solid #484b51;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        font-weight: 600;
+        color: #c1c2c5;
+    }
+
+    .radio-card input {
+        display: none;
+    }
+
+    .radio-card.active {
+        background: #4dabf7;
+        color: white;
+        border-color: #4dabf7;
+    }
+
+    .radio-card:hover:not(.active) {
+        background: #484b51;
     }
 </style>

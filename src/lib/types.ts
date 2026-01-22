@@ -11,7 +11,7 @@ export interface Theme {
 
 export interface CustomLayer {
     label: string;
-    tags: Record<string, string>;
+    tags: Record<string, any>;
     color: string;
     width?: number;
     enabled: boolean;
@@ -21,6 +21,7 @@ export interface GenerationRequest {
     city: string;
     country: string;
     distance: number;
+    format?: string;
     name?: string;
     countryLabel?: string;
     theme?: string;

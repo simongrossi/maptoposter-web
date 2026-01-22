@@ -92,4 +92,5 @@ Le projet est découpé en deux services principaux :
 Ce projet est une évolution web moderne inspirée du script original [maptoposter Python](https://github.com/originalankur/maptoposter).
 
 - **Données** : © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL).
+- **Core Library** : [OSMnx](https://github.com/gboeing/osmnx) par Geoff Boeing.
 - **Licence** : Ce projet est sous licence **MIT**. Vous êtes libre de le modifier et de le redistribuer.

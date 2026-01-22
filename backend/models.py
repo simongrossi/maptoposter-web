@@ -1,9 +1,9 @@
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 class CustomLayer(BaseModel):
     label: str
-    tags: Dict[str, str]
+    tags: Dict[str, Any]
     color: str
     width: float = 1.0
     enabled: bool = True

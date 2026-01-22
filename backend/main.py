@@ -4,6 +4,8 @@ import asyncio
 from pathlib import Path
 from datetime import datetime
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.backends.backend_svg import FigureCanvasSVG
+from matplotlib.backends.backend_pdf import FigureCanvasPdf
 
 from backend.models import PosterRequest
 from backend.utils import get_coordinates, load_theme, load_fonts
@@ -81,7 +83,14 @@ async def generate_poster(request: PosterRequest):
         output_path = POSTERS_DIR / filename
         
         def _save():
-            canvas = FigureCanvasAgg(fig)
+            fmt = request.format.lower()
+            if fmt == 'svg':
+                canvas = FigureCanvasSVG(fig)
+            elif fmt == 'pdf':
+                canvas = FigureCanvasPdf(fig)
+            else:
+                canvas = FigureCanvasAgg(fig)
+            
             # dpi=300 for high quality
             canvas.print_figure(str(output_path), dpi=300, bbox_inches='tight', pad_inches=0.05, facecolor=theme['bg'])
             # Clean up memory
