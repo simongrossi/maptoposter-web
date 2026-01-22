@@ -1,7 +1,12 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
     import MapSelector from "$lib/components/MapSelector.svelte";
-    import type { Theme, GenerationRequest, GenerationResponse } from "$lib/types";
+    import type {
+        Theme,
+        GenerationRequest,
+        GenerationResponse,
+        CustomLayer,
+    } from "$lib/types";
     import { fetchThemes, generatePoster } from "$lib/api";
 
     // Interfaces
@@ -21,6 +26,30 @@
     let selectedTheme = "";
     let themes: Theme[] = [];
 
+    let customLayers: CustomLayer[] = [
+        {
+            label: "Pistes Cyclables",
+            tags: { highway: "cycleway" },
+            color: "#3498db",
+            enabled: false,
+            width: 1.0,
+        },
+        {
+            label: "Voies Ferrées",
+            tags: { railway: "rail" },
+            color: "#f1c40f",
+            enabled: false,
+            width: 1.2,
+        },
+        {
+            label: "Métro",
+            tags: { railway: "subway" },
+            color: "#e74c3c",
+            enabled: false,
+            width: 1.5,
+        },
+    ];
+
     // App State
     let loading = false;
     let generatedFiles: string[] = [];
@@ -35,7 +64,8 @@
         themes = await fetchThemes();
         if (themes.length > 0) {
             // Default to 'noir' or first one
-            const defaultTheme = themes.find((t) => t.id === "noir") || themes[0];
+            const defaultTheme =
+                themes.find((t) => t.id === "noir") || themes[0];
             if (defaultTheme) selectedTheme = defaultTheme.id;
         }
     });
@@ -179,6 +209,34 @@
                         </select>
                     </div>
                 {/if}
+            </div>
+
+            <!-- Additional Layers Section -->
+            <div class="section">
+                <h3><span class="icon">🛤️</span> Couches Sup.</h3>
+
+                {#each customLayers as layer}
+                    <div class="layer-group">
+                        <div class="form-group checkbox-group">
+                            <label class="toggle">
+                                <input
+                                    type="checkbox"
+                                    bind:checked={layer.enabled}
+                                />
+                                <span class="slider"></span>
+                                <span class="label-text">{layer.label}</span>
+                            </label>
+                        </div>
+                        {#if layer.enabled}
+                            <input
+                                type="color"
+                                bind:value={layer.color}
+                                class="color-picker"
+                                title="Couleur de la couche"
+                            />
+                        {/if}
+                    </div>
+                {/each}
             </div>
 
             <!-- Customization Section -->

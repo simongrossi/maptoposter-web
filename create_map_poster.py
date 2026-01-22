@@ -377,6 +377,53 @@ def fetch_features(point, dist, tags, name) -> GeoDataFrame | None:
 
 
 
+# -----------------------------------------------------------------------------
+# Custom Layer Logic
+# -----------------------------------------------------------------------------
+
+def plot_custom_layers(ax, point, dist, layers, G_proj_crs):
+    """
+    Fetches and plots custom layers (e.g., railways, cycle paths).
+    """
+    for layer in layers:
+        print(f"Processing custom layer: {layer.get('label', 'Unknown')}")
+        tags = layer.get('tags')
+        color = layer.get('color', '#FF0000')
+        width = layer.get('width', 1.0)
+        
+        if not tags:
+            continue
+
+        try:
+            # We use a slightly adjusted distance to match the graph fetch logic
+            # reusing the logic from create_poster would be best, but passing 'compensated_dist' is easier
+            features = ox.features_from_point(point, tags=tags, dist=dist)
+            # Rate limit
+            time.sleep(0.5)
+            
+            if features is not None and not features.empty:
+                # Filter for linear features mainly, but polygons are fine too
+                # Project
+                try:
+                    features_proj = ox.projection.project_gdf(features)
+                except Exception:
+                    features_proj = features.to_crs(G_proj_crs)
+                
+                print(f"  ✓ Found {len(features_proj)} features for {layer['label']}")
+                
+                # Plot
+                # Use a zorder higher than roads (which are usually at implicit 1-2 level in plot_graph, 
+                # but we will check. Roads in ox.plot_graph are drawn on ax.
+                features_proj.plot(ax=ax, color=color, linewidth=width, alpha=0.9, zorder=5) # zorder 5 > parks(2)
+            else:
+                print(f"  - No features found for {layer['label']}")
+                
+        except Exception as e:
+            print(f"  ⚠ Failed to fetch/plot layer {layer['label']}: {e}")
+
+
+
+
 def create_poster(city, country, point, dist, output_file, output_format, width=12, height=16, country_label=None, name_label=None):
     print(f"\nGenerating map for {city}, {country}...")
 

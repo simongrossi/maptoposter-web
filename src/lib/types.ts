@@ -9,6 +9,14 @@ export interface Theme {
     description?: string;
 }
 
+export interface CustomLayer {
+    label: string;
+    tags: Record<string, string>;
+    color: string;
+    width?: number;
+    enabled: boolean;
+}
+
 export interface GenerationRequest {
     city: string;
     country: string;
@@ -17,6 +25,7 @@ export interface GenerationRequest {
     countryLabel?: string;
     theme?: string;
     allThemes?: boolean;
+    customLayers?: CustomLayer[];
 }
 
 export interface GenerationResponse {

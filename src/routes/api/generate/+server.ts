@@ -34,6 +34,14 @@ export const POST: RequestHandler = async ({ request }) => {
             args.push('--country-label', countryLabel);
         }
 
+        // Handle Custom Layers
+        if (body.customLayers && Array.isArray(body.customLayers)) {
+            const activeLayers = body.customLayers.filter((l: any) => l.enabled);
+            if (activeLayers.length > 0) {
+                args.push('--custom-layers', JSON.stringify(activeLayers));
+            }
+        }
+
         // Ensure output directory exists
         const postersDir = path.resolve('static/posters');
         if (!fs.existsSync(postersDir)) fs.mkdirSync(postersDir, { recursive: true });
@@ -77,23 +85,30 @@ export const POST: RequestHandler = async ({ request }) => {
                 }
 
                 // Parse output for filenames
-                const match = stdoutData.match(/__JSON_RESULT_FILES__:(.*)/);
+                // Robust parsing: Find the last occurrence of the marker and parse everything after it
+                const marker = "__JSON_RESULT_FILES__:";
+                const markerIndex = stdoutData.lastIndexOf(marker);
                 let newFiles: string[] = [];
 
-                if (match && match[1]) {
+                if (markerIndex !== -1) {
+                    const jsonStr = stdoutData.substring(markerIndex + marker.length).trim();
+                    console.log("Parsing JSON from Python:", jsonStr); // Debug log
                     try {
-                        newFiles = JSON.parse(match[1]);
+                        newFiles = JSON.parse(jsonStr);
                     } catch (e) {
-                        console.error("Failed to parse JSON result from python script");
+                        console.error("Failed to parse JSON result:", e);
+                        console.error("String was:", jsonStr);
                     }
+                } else {
+                    console.error("Marker not found in stdout");
                 }
 
                 if (newFiles.length === 0) {
                     // Fallback or error if no files reported
                     resolve(json({
                         success: false,
-                        error: "Aucun fichier généré n'a été signalé par le script.",
-                        debug: "Sortie stdout: " + stdoutData
+                        error: "Aucun fichier généré n'a été détecté.",
+                        debug: "Le script a terminé sans signaler de fichiers.\nSortie:\n" + stdoutData
                     }));
                     return;
                 }
@@ -102,7 +117,7 @@ export const POST: RequestHandler = async ({ request }) => {
             });
 
             processRef.on('error', (err: Error) => {
-                resolve(json({ success: false, error: "Impossible de lancer le processus Python: " + err.message + ". Vérifiez que Python est installé et accessible." }, { status: 500 }));
+                resolve(json({ success: false, error: "Impossible de lancer le processus Python: " + err.message }, { status: 500 }));
             });
         });
 
