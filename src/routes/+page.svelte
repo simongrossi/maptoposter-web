@@ -774,6 +774,8 @@
         font-size: 0.85rem;
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        pointer-events: auto; /* Block clicks falling through to map */
+        cursor: default;
     }
 
     .sidebar-footer {
