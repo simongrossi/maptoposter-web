@@ -32,5 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CSS Layout**: Removed duplicated style block that was accidentally inserted into the HTML template.
 - **Race Condition**: Fixed issue where simultaneous poster generations could mix up output files.
 - **Crash on Missing Config**: Server now handles missing `PYTHON_PATH` gracefully by falling back to `python`/`python3`.
+- **CLI Parsing**: Fixed `unrecognized arguments` error for custom layers by correctly updating Python script argument parser.
 
 

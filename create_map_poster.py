@@ -427,7 +427,7 @@ def plot_custom_layers(ax, point, dist, layers, G_proj_crs):
 
 
 
-def create_poster(city, country, point, dist, output_file, output_format, width=12, height=16, country_label=None, name_label=None):
+def create_poster(city, country, point, dist, output_file, output_format, width=12, height=16, country_label=None, name_label=None, custom_layers=None):
     print(f"\nGenerating map for {city}, {country}...")
 
     # Progress bar for data fetching
@@ -500,6 +500,12 @@ def create_poster(city, country, point, dist, output_file, output_format, width=
         edge_linewidth=edge_widths,
         show=False, close=False
     )
+    
+    # Layer 2.5: Custom Layers
+    if custom_layers:
+        print("Plotting custom layers...")
+        plot_custom_layers(ax, point, compensated_dist, custom_layers, G_proj.graph['crs'])
+
     ax.set_aspect('equal', adjustable='box')
     ax.set_xlim(crop_xlim)
     ax.set_ylim(crop_ylim)
@@ -703,6 +709,7 @@ Examples:
     parser.add_argument('--height', '-H', type=float, default=16, help='Image height in inches (default: 16)')
     parser.add_argument('--list-themes', action='store_true', help='List all available themes')
     parser.add_argument('--format', '-f', default='png', choices=['png', 'svg', 'pdf'],help='Output format for the poster (default: png)')
+    parser.add_argument('--custom-layers', type=str, help='JSON string defining custom layers')
 
     args = parser.parse_args()
 
@@ -736,6 +743,15 @@ Examples:
             os.sys.exit(1)
         themes_to_generate = [args.theme]
 
+    # Parse custom layers
+    parsed_layers = None
+    if args.custom_layers:
+        try:
+            parsed_layers = json.loads(args.custom_layers)
+            print(f"✓ Loaded {len(parsed_layers)} custom layers")
+        except json.JSONDecodeError:
+            print("⚠ Failed to parse custom layers JSON")
+
     print("=" * 50)
     print("City Map Poster Generator")
     print("=" * 50)
@@ -747,7 +763,7 @@ Examples:
         for theme_name in themes_to_generate:
             THEME = load_theme(theme_name)
             output_file = generate_output_filename(args.city, theme_name, args.format)
-            create_poster(args.city, args.country, coords, args.distance, output_file, args.format, args.width, args.height, country_label=args.country_label)
+            create_poster(args.city, args.country, coords, args.distance, output_file, args.format, args.width, args.height, country_label=args.country_label, custom_layers=parsed_layers)
             generated_files.append(os.path.basename(output_file))
 
         print("\n" + "=" * 50)

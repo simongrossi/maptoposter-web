@@ -19,7 +19,7 @@
     let country = "France";
     let name = "";
     let countryLabel = "";
-    let distance = 29000;
+    let distance = 10000;
 
     // Options
     let allThemes = false;
