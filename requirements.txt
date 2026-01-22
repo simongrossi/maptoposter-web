@@ -9,3 +9,6 @@ fiona
 shapely
 geopandas
 scipy
+fastapi
+uvicorn
+pydantic

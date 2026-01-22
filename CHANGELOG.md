@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2026-01-22
 
 ### Added
+### Added
+- **Backend Architecture**: Refactored backend into a modular **FastAPI** service (`backend/`).
+  - Separated concerns: `main.py` (API), `fetcher.py` (Async I/O), `renderer.py` (OO Plotting).
+  - Performance: Parallel fetching of OSM data.
+- **API Proxy**: Frontend now communicates with the Python backend via HTTP proxy instead of local spawn, enabling separation of concerns and Docker networking.
+- **Docker Compose**: Added orchestration for separated `api` and `web` services with shared volumes.
+- **Map Preview**: Replaced circular selection with a rectangular zone matching the 3:4 poster aspect ratio for accurate WYSIWYG.
+- **Custom Colors**: Added full UI control to customize colors (Background, Water, Roads, Parks, Text) overriding the selected theme.
+- **Robust Caching**: Implemented MD5-based file caching to avoid filename collisions.
 - **Real-time Progress (SSE)**: The application now uses Server-Sent Events to stream progress from the Python script to the UI. Users can see exactly what step is running (fetching data, rendering, etc.).
 - **Cancellation ability**: Aborting the request (or reloading the page) now instantly kills the running Python process on the server.
 - **Progress UI**: Replaced static loading button with a visual percent-based progress bar and an explicit "Stop" button.

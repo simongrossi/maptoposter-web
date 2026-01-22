@@ -1,80 +1,134 @@
 <script lang="ts">
     import { onMount, createEventDispatcher } from "svelte";
     import { browser } from "$app/environment";
+    import type * as L from "leaflet"; // Import definitions
 
     export let initialDefaults = { lat: 48.8566, lng: 2.3522 }; // Paris default
-    export let distance: number = 29000;
+    export let distance: number = 10000;
 
     const dispatch = createEventDispatcher();
     let mapElement: HTMLElement;
-    let map: any;
-    let circle: any;
-    let marker: any;
-    let L: any;
+
+    // Leaflet instances with types
+    let map: L.Map;
+    let previewRect: L.Rectangle;
+    let marker: L.Marker;
+    let leaflet: typeof L; // Runtime library
+
+    // Poster config mirroring backend default (12x16 inch = 0.75 aspect)
+    const ASPECT_RATIO = 12 / 16;
 
     onMount(async () => {
         if (browser) {
             // Dynamic import for SSR compatibility
             const module = await import("leaflet");
-            L = module.default;
+            leaflet = module.default; // use default export or module depending on setup
+            // Note: sometimes module IS 'L', sometimes module.default. Vite/SvelteKit behavior.
+            // Usually module.default is safe for ESM.
+
             await import("leaflet/dist/leaflet.css");
 
             initMap();
         }
     });
 
-    $: if (map && distance) {
-        updateCircleRadius();
+    $: if (map && distance && previewRect && marker) {
+        updatePreviewRectangle(marker.getLatLng());
     }
 
     function initMap() {
         if (!mapElement) return;
 
         // Create map
-        map = L.map(mapElement).setView(
-            [initialDefaults.lat, initialDefaults.lng],
-            10,
-        );
+        map = leaflet
+            .map(mapElement)
+            .setView([initialDefaults.lat, initialDefaults.lng], 10);
 
         // Tile layer (OSM)
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(map);
+        leaflet
+            .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            })
+            .addTo(map);
 
         // Marker (draggable center)
-        marker = L.marker([initialDefaults.lat, initialDefaults.lng], {
-            draggable: true,
-        }).addTo(map);
+        marker = leaflet
+            .marker([initialDefaults.lat, initialDefaults.lng], {
+                draggable: true,
+            })
+            .addTo(map);
 
-        // Circle (radius)
-        circle = L.circle([initialDefaults.lat, initialDefaults.lng], {
-            color: "#0070f3",
-            fillColor: "#0070f3",
-            fillOpacity: 0.2,
-            radius: distance,
-        }).addTo(map);
+        // Setup init rectangle at default position
+        const bounds = calculateBounds(
+            new leaflet.LatLng(initialDefaults.lat, initialDefaults.lng),
+        );
+        previewRect = leaflet
+            .rectangle(bounds, {
+                color: "#4dabf7",
+                weight: 2,
+                fillColor: "#4dabf7",
+                fillOpacity: 0.15,
+                dashArray: "5, 5",
+            })
+            .addTo(map);
 
         // Events
-        marker.on("dragend", handleMarkerDrag);
-        map.on("click", (e: any) => {
+        marker.on("drag", () => {
+            updatePreviewRectangle(marker.getLatLng());
+        });
+        marker.on("dragend", handleMarkerDragEnd);
+
+        map.on("click", (e: L.LeafletMouseEvent) => {
             marker.setLatLng(e.latlng);
-            handleMarkerDrag();
+            updatePreviewRectangle(e.latlng);
+            handleMarkerDragEnd();
         });
 
         // Trigger initial lookup
         lookupAddress(initialDefaults.lat, initialDefaults.lng);
     }
 
-    function updateCircleRadius() {
-        if (circle) {
-            circle.setRadius(distance);
-        }
+    function calculateBounds(center: L.LatLng): L.LatLngBoundsExpression {
+        // Logic mirroring backend/renderer.py crop
+        // "distance" arg is roughly the "radius" or "half-size" of the major axis.
+
+        // Since ASPECT_RATIO = 0.75 (Width < Height), Height is the major dimension.
+        // half_height_meters = distance
+        // half_width_meters = distance * ASPECT_RATIO
+
+        const halfHeightMeters = distance;
+        const halfWidthMeters = distance * ASPECT_RATIO;
+
+        // Convert to degrees (Approximation)
+        // 1 deg Lat ~= 111,111 meters
+        const latOffset = halfHeightMeters / 111111;
+
+        // 1 deg Lon ~= 111,111 * cos(lat) meters
+        const latRad = center.lat * (Math.PI / 180);
+        const lonOffset = halfWidthMeters / (111111 * Math.cos(latRad));
+
+        const southWest = leaflet.latLng(
+            center.lat - latOffset,
+            center.lng - lonOffset,
+        );
+        const northEast = leaflet.latLng(
+            center.lat + latOffset,
+            center.lng + lonOffset,
+        );
+
+        return leaflet.latLngBounds(southWest, northEast);
     }
 
-    function handleMarkerDrag() {
+    function updatePreviewRectangle(center: L.LatLng) {
+        if (!previewRect) return;
+        const bounds = calculateBounds(center);
+        previewRect.setBounds(bounds);
+    }
+
+    function handleMarkerDragEnd() {
+        if (!marker) return;
         const latlng = marker.getLatLng();
-        circle.setLatLng(latlng);
         map.panTo(latlng);
         lookupAddress(latlng.lat, latlng.lng);
     }
@@ -98,10 +152,10 @@
                 const lon = parseFloat(data[0].lon);
 
                 isProgrammaticMove = true;
-                const newLatLng = new L.LatLng(lat, lon);
+                const newLatLng = new leaflet.LatLng(lat, lon);
                 marker.setLatLng(newLatLng);
-                circle.setLatLng(newLatLng);
-                map.setView(newLatLng, 12); // slightly closer zoom for cities
+                updatePreviewRectangle(newLatLng);
+                map.setView(newLatLng, 12);
 
                 // Allow events to settle
                 setTimeout(() => {

@@ -26,6 +26,13 @@ export interface GenerationRequest {
     theme?: string;
     allThemes?: boolean;
     customLayers?: CustomLayer[];
+    customColors?: {
+        bg?: string;
+        water?: string;
+        parks?: string;
+        roads?: string;
+        text?: string;
+    };
 }
 
 export interface GenerationResponse {

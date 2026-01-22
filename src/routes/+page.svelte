@@ -57,6 +57,16 @@
     let debugInfo = "";
     let mapComponent: MapComponent;
 
+    // Custom Colors State
+    let customColorsEnabled = false;
+    let customColors = {
+        bg: "#ffffff",
+        water: "#a6cee3",
+        parks: "#b2df8a",
+        roads: "#555555",
+        text: "#333333",
+    };
+
     // Progress State
     let progressPercent = 0;
     let progressText = "";
@@ -141,6 +151,7 @@
             theme: !allThemes ? selectedTheme : undefined,
             allThemes: allThemes,
             customLayers: customLayers, // Send custom layers
+            customColors: customColorsEnabled ? customColors : undefined,
         };
 
         const result = await generatePoster(
@@ -234,6 +245,61 @@
                                 </option>
                             {/each}
                         </select>
+                    </div>
+                {/if}
+            </div>
+
+            <!-- Custom Colors Section -->
+            <div class="section">
+                <h3><span class="icon">🎨</span> Couleurs Perso.</h3>
+
+                <div class="form-group checkbox-group">
+                    <label class="toggle">
+                        <input
+                            type="checkbox"
+                            bind:checked={customColorsEnabled}
+                        />
+                        <span class="slider"></span>
+                        <span class="label-text"
+                            >Activer couleurs personnalisées</span
+                        >
+                    </label>
+                </div>
+
+                {#if customColorsEnabled}
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label>Fond</label>
+                            <input type="color" bind:value={customColors.bg} />
+                        </div>
+                        <div class="color-item">
+                            <label>Eau</label>
+                            <input
+                                type="color"
+                                bind:value={customColors.water}
+                            />
+                        </div>
+                        <div class="color-item">
+                            <label>Parcs</label>
+                            <input
+                                type="color"
+                                bind:value={customColors.parks}
+                            />
+                        </div>
+                        <div class="color-item">
+                            <label>Routes</label>
+                            <input
+                                type="color"
+                                bind:value={customColors.roads}
+                            />
+                        </div>
+                        <div class="color-item">
+                            <label>Texte</label>
+                            <input
+                                type="color"
+                                bind:value={customColors.text}
+                            />
+                        </div>
                     </div>
                 {/if}
             </div>
@@ -774,5 +840,35 @@
 
     .btn-cancel:hover {
         background: #e03131;
+    }
+
+    .color-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .color-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%; /* Ensure flex items take space */
+    }
+
+    .color-item label {
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+        color: #adb5bd;
+    }
+
+    .color-item input[type="color"] {
+        width: 100%;
+        height: 32px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 0;
+        background: none;
     }
 </style>
