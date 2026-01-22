@@ -7,7 +7,7 @@ import { env } from '$env/dynamic/private';
 export const POST: RequestHandler = async ({ request }) => {
     try {
         const body = await request.json();
-        const { city, country, name, countryLabel, distance, theme, allThemes } = body;
+        const { city, country, name, countryLabel, distance, theme, allThemes, customLayers } = body;
 
         if (!city || !country) {
             return json({ error: "Missing mandatory fields (city, country)" }, { status: 400 });
@@ -17,7 +17,7 @@ export const POST: RequestHandler = async ({ request }) => {
             'create_map_poster.py',
             '--city', city,
             '--country', country,
-            '--distance', String(distance || 29000)
+            '--distance', String(distance || 10000)
         ];
 
         if (allThemes) {
@@ -27,98 +27,111 @@ export const POST: RequestHandler = async ({ request }) => {
             args.push('--theme', theme);
         }
 
-        if (name) {
-            args.push('--name', name);
-        }
-        if (countryLabel) {
-            args.push('--country-label', countryLabel);
-        }
+        if (name) args.push('--name', name);
+        if (countryLabel) args.push('--country-label', countryLabel);
 
-        // Handle Custom Layers
-        if (body.customLayers && Array.isArray(body.customLayers)) {
-            const activeLayers = body.customLayers.filter((l: any) => l.enabled);
+        if (customLayers && Array.isArray(customLayers)) {
+            const activeLayers = customLayers.filter((l: any) => l.enabled);
             if (activeLayers.length > 0) {
                 args.push('--custom-layers', JSON.stringify(activeLayers));
             }
         }
 
-        // Ensure output directory exists
         const postersDir = path.resolve('static/posters');
         if (!fs.existsSync(postersDir)) fs.mkdirSync(postersDir, { recursive: true });
 
-        return new Promise((resolve) => {
-            // Determine Python executable
-            // Priority: Env var -> python (win) -> python3 (unix)
-            // Use SvelteKit's dynamic env access
-            let pythonCmd = env.PYTHON_PATH;
-            if (!pythonCmd) {
-                pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-            }
+        // Determine Python executable
+        let pythonCmd = env.PYTHON_PATH;
+        if (!pythonCmd) {
+            pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+        }
 
-            const processRef = spawn(pythonCmd, args, {
-                cwd: process.cwd(),
-                env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
-            });
+        // --- STREAMING SETUP ---
+        const encoder = new TextEncoder();
 
-            let stdoutData = '';
-            let stderrData = '';
+        const stream = new ReadableStream({
+            start(controller) {
+                const processRef = spawn(pythonCmd, args, {
+                    cwd: process.cwd(),
+                    env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' }
+                });
 
-            processRef.stdout.on('data', (data: Buffer) => {
-                const str = data.toString();
-                stdoutData += str;
-                console.log(str); // Log for server debugging
-            });
+                // Kill process if client disconnects
+                request.signal.addEventListener('abort', () => {
+                    console.log("Client aborted, killing python process...");
+                    processRef.kill();
+                });
 
-            processRef.stderr.on('data', (data: Buffer) => {
-                stderrData += data.toString();
-            });
-
-            processRef.on('close', (code: number) => {
-                if (code !== 0) {
-                    console.error("Python script error:", stderrData);
-                    resolve(json({
-                        success: false,
-                        error: "Le script a échoué (code " + code + ").",
-                        debug: stderrData || "Aucune sortie d'erreur."
-                    }, { status: 500 }));
-                    return;
+                function sendEvent(type: string, data: any) {
+                    const msg = `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
+                    controller.enqueue(encoder.encode(msg));
                 }
 
-                // Parse output for filenames
-                // Robust parsing: Find the last occurrence of the marker and parse everything after it
-                const marker = "__JSON_RESULT_FILES__:";
-                const markerIndex = stdoutData.lastIndexOf(marker);
-                let newFiles: string[] = [];
+                let stdoutBuffer = '';
 
-                if (markerIndex !== -1) {
-                    const jsonStr = stdoutData.substring(markerIndex + marker.length).trim();
-                    console.log("Parsing JSON from Python:", jsonStr); // Debug log
-                    try {
-                        newFiles = JSON.parse(jsonStr);
-                    } catch (e) {
-                        console.error("Failed to parse JSON result:", e);
-                        console.error("String was:", jsonStr);
+                processRef.stdout.on('data', (data: Buffer) => {
+                    const str = data.toString();
+                    stdoutBuffer += str;
+                    console.log("[PY]", str.trim());
+
+                    // Simple heuristic progress updates based on keywords
+                    // We can refine this by parsing specific lines
+                    const lower = str.toLowerCase();
+                    if (lower.includes("fetching map data")) sendEvent("progress", { percent: 10, text: "Initialisation..." });
+                    else if (lower.includes("street network")) sendEvent("progress", { percent: 20, text: "Téléchargement des routes..." });
+                    else if (lower.includes("water features")) sendEvent("progress", { percent: 40, text: "Téléchargement de la géographie..." });
+                    else if (lower.includes("parks")) sendEvent("progress", { percent: 50, text: "Ajout des parcs..." });
+                    else if (lower.includes("rendering map")) sendEvent("progress", { percent: 70, text: "Rendu graphique en cours..." });
+                    else if (lower.includes("hierarchy colors")) sendEvent("progress", { percent: 80, text: "Application du style..." });
+                    else if (lower.includes("saving to")) sendEvent("progress", { percent: 95, text: "Sauvegarde du fichier..." });
+                });
+
+                let stderrData = '';
+                processRef.stderr.on('data', (d) => stderrData += d.toString());
+
+                processRef.on('close', (code) => {
+                    if (code !== 0) {
+                        // Check if it was killed by us (signal?) - usually code null or signal SIGTERM
+                        // If standard error:
+                        sendEvent("error", { message: "Erreur script: " + stderrData });
+                        controller.close();
+                        return;
                     }
-                } else {
-                    console.error("Marker not found in stdout");
-                }
 
-                if (newFiles.length === 0) {
-                    // Fallback or error if no files reported
-                    resolve(json({
-                        success: false,
-                        error: "Aucun fichier généré n'a été détecté.",
-                        debug: "Le script a terminé sans signaler de fichiers.\nSortie:\n" + stdoutData
-                    }));
-                    return;
-                }
+                    // Parse the JSON result from the FULL buffer at the end
+                    const marker = "__JSON_RESULT_FILES__:";
+                    const markerIndex = stdoutBuffer.lastIndexOf(marker);
 
-                resolve(json({ success: true, files: newFiles }));
-            });
+                    if (markerIndex !== -1) {
+                        try {
+                            const jsonStr = stdoutBuffer.substring(markerIndex + marker.length).trim();
+                            const files = JSON.parse(jsonStr);
+                            sendEvent("result", { files });
+                        } catch (e) {
+                            sendEvent("error", { message: "Erreur parsing JSON sortie Python" });
+                        }
+                    } else {
+                        // Sometimes buffer issues, assume success if file exists? 
+                        // No, let's report error if no marker found.
+                        sendEvent("error", { message: "Pas de résultat retourné par le script." });
+                    }
 
-            processRef.on('error', (err: Error) => {
-                resolve(json({ success: false, error: "Impossible de lancer le processus Python: " + err.message }, { status: 500 }));
-            });
+                    controller.close();
+                });
+
+                processRef.on('error', (err) => {
+                    sendEvent("error", { message: "Spawn error: " + err.message });
+                    controller.close();
+                });
+            }
+        });
+
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive'
+            }
         });
 
     } catch (error) {

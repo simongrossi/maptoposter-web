@@ -22,6 +22,9 @@ from geopandas import GeoDataFrame
 import pickle
 from shapely.geometry import Point
 
+# Ensure output is flushed immediately for Node.js streaming
+sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
+
 class CacheError(Exception):
     """Raised when a cache operation fails."""
     pass
@@ -695,7 +698,7 @@ Examples:
     parser.add_argument('--country-label', dest='country_label', type=str, help='Override country text displayed on poster')
     parser.add_argument('--theme', '-t', type=str, default='feature_based', help='Theme name (default: feature_based)')
     parser.add_argument('--all-themes', '--All-themes', dest='all_themes', action='store_true', help='Generate posters for all themes')
-    parser.add_argument('--distance', '-d', type=int, default=29000, help='Map radius in meters (default: 29000)')
+    parser.add_argument('--distance', '-d', type=int, default=10000, help='Map radius in meters (default: 10000)')
     parser.add_argument('--width', '-W', type=float, default=12, help='Image width in inches (default: 12)')
     parser.add_argument('--height', '-H', type=float, default=16, help='Image height in inches (default: 16)')
     parser.add_argument('--list-themes', action='store_true', help='List all available themes')

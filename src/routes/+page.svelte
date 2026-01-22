@@ -320,12 +320,8 @@
         {/if}
 
         <footer class="sidebar-footer">
-            <a
-                href="https://github.com/originalankur/maptoposter"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                <span class="icon">🐙</span> originalankur/maptoposter
+            <a href="/about">
+                <span class="icon">ℹ️</span> À propos & Crédits
             </a>
         </footer>
     </aside>
