@@ -57,6 +57,11 @@
     let debugInfo = "";
     let mapComponent: MapComponent;
 
+    // Progress State
+    let progressPercent = 0;
+    let progressText = "";
+    let abortController: AbortController | null = null;
+
     // Debounce for forward geocoding
     let searchTimeout: ReturnType<typeof setTimeout>;
 
@@ -106,6 +111,15 @@
         }
     }
 
+    function cancelGeneration() {
+        if (abortController) {
+            abortController.abort();
+            abortController = null;
+            loading = false;
+            progressText = "Annulé par l'utilisateur";
+        }
+    }
+
     async function handleSubmit() {
         if (!city || !country) return;
 
@@ -113,6 +127,10 @@
         errorMsg = "";
         debugInfo = "";
         generatedFiles = [];
+        progressPercent = 0;
+        progressText = "Démarrage...";
+
+        abortController = new AbortController();
 
         const payload: GenerationRequest = {
             city,
@@ -122,9 +140,17 @@
             distance,
             theme: !allThemes ? selectedTheme : undefined,
             allThemes: allThemes,
+            customLayers: customLayers, // Send custom layers
         };
 
-        const result = await generatePoster(payload);
+        const result = await generatePoster(
+            payload,
+            (percent, text) => {
+                progressPercent = percent;
+                progressText = text;
+            },
+            abortController.signal,
+        );
 
         if (result.success) {
             generatedFiles = result.files;
@@ -134,6 +160,7 @@
         }
 
         loading = false;
+        abortController = null;
     }
 </script>
 
@@ -287,13 +314,31 @@
                 </div>
             </div>
 
-            <button type="submit" disabled={loading} class="btn-generate">
-                {#if loading}
-                    <span class="spinner"></span> Génération...
-                {:else}
+            {#if loading}
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span class="progress-text">{progressText}</span>
+                        <span class="progress-percent">{progressPercent}%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div
+                            class="progress-bar-fill"
+                            style="width: {progressPercent}%"
+                        ></div>
+                    </div>
+                    <button
+                        type="button"
+                        class="btn-cancel"
+                        on:click={cancelGeneration}
+                    >
+                        ⛔ Arrêter
+                    </button>
+                </div>
+            {:else}
+                <button type="submit" class="btn-generate">
                     ✨ Générer l'affiche
-                {/if}
-            </button>
+                </button>
+            {/if}
 
             {#if errorMsg}
                 <div class="error-banner">
@@ -683,5 +728,51 @@
 
     .sidebar-footer a:hover {
         color: #4dabf7;
+    }
+
+    /* Progress Bar Styles */
+    .progress-container {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .progress-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: #c1c2c5;
+        margin-bottom: 6px;
+    }
+
+    .progress-bar-bg {
+        width: 100%;
+        height: 8px;
+        background: #373a40;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 12px;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4dabf7, #3bc9db);
+        transition: width 0.3s ease-out;
+    }
+
+    .btn-cancel {
+        width: 100%;
+        padding: 10px;
+        background: #fa5252;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-cancel:hover {
+        background: #e03131;
     }
 </style>

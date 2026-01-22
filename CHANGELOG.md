@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Real-time Progress (SSE)**: The application now uses Server-Sent Events to stream progress from the Python script to the UI. Users can see exactly what step is running (fetching data, rendering, etc.).
 - **Cancellation ability**: Aborting the request (or reloading the page) now instantly kills the running Python process on the server.
+- **Progress UI**: Replaced static loading button with a visual percent-based progress bar and an explicit "Stop" button.
 - **About Page**: Added a dedicated `/about` page for credits and licensing info, decluttering the main interface.
 - **Custom Layers Feature**: Users can now toggle and customize colors for additional map layers (Cycle Paths, Railways, Subway Lines) from the sidebar.
   - Frontend: New "Couches Sup." section in `+page.svelte`.
@@ -28,5 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **File Detection**: Server no longer scans directories to find new files (preventing race conditions); it relies on the Python script's explicit output.
 
 ### Fixed
+- **CSS Layout**: Removed duplicated style block that was accidentally inserted into the HTML template.
 - **Race Condition**: Fixed issue where simultaneous poster generations could mix up output files.
 - **Crash on Missing Config**: Server now handles missing `PYTHON_PATH` gracefully by falling back to `python`/`python3`.
+
+
