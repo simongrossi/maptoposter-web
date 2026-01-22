@@ -1,42 +1,28 @@
-# sv
+## 📜 Attribution & Référence
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Ce projet web est une **surcouche graphique** autour du script Python original **MapToPoster**.  
+Il ne réécrit pas la logique centrale de génération d’affiches : il la réutilise via une interface web simple.
 
-## Creating a project
+### 🔗 Projet original
 
-If you're seeing this, you've probably already done this step. Congrats!
+Le script Python d’origine est disponible ici :  
+➡️ https://github.com/originalankur/maptoposter
 
-```sh
-# create a new project
-npx sv create my-app
-```
+Ce projet est publié sous licence **MIT**.  
+Nous respectons les termes de cette licence en conservant les mentions de copyright et de licence.
 
-To recreate this project with the same configuration:
+---
 
-```sh
-# recreate this project
-npx sv create --template minimal --types ts --no-install app
-```
+### 🗺️ Données cartographiques
 
-## Developing
+Les données cartographiques utilisées par MapToPoster proviennent d’**OpenStreetMap** (et ses services associés).  
+OpenStreetMap est publié sous licence **Open Database License (ODbL)**.  
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Lorsque des tuiles ou des extraits cartographiques sont affichés publiquement, merci de conserver l’attribution OpenStreetMap comme requis par la licence.
 
-```sh
-npm run dev
+---
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+### 🧾 Licence du projet
 
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Ce dépôt (`maptoposter-web`) est également publié sous licence **MIT**, avec attribution au projet original et à ses contributeurs.  
+Voir le fichier [`LICENSE`](LICENSE) pour plus de détails.
