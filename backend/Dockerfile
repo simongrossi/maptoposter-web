@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/ ./backend/
 # Copy folders required by backend
 COPY themes/ ./themes/
-COPY fonts/ ./fonts/
+
 # Pre-create folders
 # We expect 'static/posters' to be mounted as volume
 RUN mkdir -p static/posters .cache

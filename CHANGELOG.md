@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker Compose**: Added orchestration for separated `api` and `web` services with shared volumes.
 - **Map Preview**: Replaced circular selection with a rectangular zone matching the 3:4 poster aspect ratio for accurate WYSIWYG.
 - **Custom Colors**: Added full UI control to customize colors (Background, Water, Roads, Parks, Text) overriding the selected theme.
+
+### Fixed
+- **Docker Volumes**: Fixed configuration to ensure generated posters are accessible by the frontend.
+- **Filename Encoding**: Fixed 404 error for cities with accents (allow Unicode filenames).
+- **Poster Preview**: Changed content disposition to `inline` so the "Eye" button opens the image in the browser instead of downloading it.
+- **Leaflet Icons**: Fixed broken missing icon images by using CDN.
+- **Themes**: Fixed missing themes in Docker by copying the directory in the build stage.
 - **Robust Caching**: Implemented MD5-based file caching to avoid filename collisions.
 - **Real-time Progress (SSE)**: The application now uses Server-Sent Events to stream progress from the Python script to the UI. Users can see exactly what step is running (fetching data, rendering, etc.).
 - **Cancellation ability**: Aborting the request (or reloading the page) now instantly kills the running Python process on the server.

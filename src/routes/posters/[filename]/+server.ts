@@ -3,9 +3,14 @@ import fs from 'fs';
 import path from 'path';
 
 export const GET: RequestHandler = async ({ params }) => {
-    // Sanitize filename to prevent directory traversal
-    const filename = (params.filename ?? '').replace(/[^a-zA-Z0-9_.-]/g, '');
-    const filePath = path.resolve('static/posters', filename);
+    // Sanitize filename to prevent directory traversal, but allow unicode (accents)
+    // We just ensure there are no directory separators
+    const rawFilename = params.filename ?? '';
+    const filename = path.basename(rawFilename);
+
+    // Use env var for storage path, fallback to static/posters for local dev
+    const storageDir = process.env.POSTERS_DIR || path.resolve('static/posters');
+    const filePath = path.join(storageDir, filename);
 
     if (!fs.existsSync(filePath)) {
         throw error(404, 'Poster not found');
@@ -16,7 +21,7 @@ export const GET: RequestHandler = async ({ params }) => {
         return new Response(file, {
             headers: {
                 'Content-Type': 'image/png',
-                'Content-Disposition': `attachment; filename="${filename}"`
+                'Content-Disposition': `inline; filename="${filename}"`
             }
         });
     } catch (e) {
