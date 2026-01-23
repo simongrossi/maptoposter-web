@@ -81,7 +81,8 @@ class MapRenderer:
     def render(self, data: Dict[str, Any], city: str, country: str, 
                point: tuple, dist: float, width_in: float, height_in: float,
                custom_layers_config: List[CustomLayer] = None,
-               text_CONFIG: Dict[str, str] = None) -> Figure:
+               text_CONFIG: Dict[str, str] = None,
+               margins: float = 0.0) -> Figure:
         
         G = data.get('graph')
         if not G:
@@ -91,9 +92,18 @@ class MapRenderer:
         fig = Figure(figsize=(width_in, height_in), facecolor=self.theme['bg'])
         ax = fig.add_subplot(111)
         ax.set_facecolor(self.theme['bg'])
-        # ax.set_position((0, 0, 1, 1)) # Full bleed - problematic with FigureCanvas sometimes, handled by tight_layout or manual placement
-        # Better manual placement to ensure exact edges
-        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        
+        # Calculate relative margins
+        # Margin is in inches.
+        m_x = margins / width_in
+        m_y = margins / height_in
+        
+        # Safety clamp
+        if m_x > 0.4: m_x = 0.4
+        if m_y > 0.4: m_y = 0.4
+        
+        # Set exact margins
+        fig.subplots_adjust(left=m_x, right=1-m_x, bottom=m_y, top=1-m_y)
 
         # Project Graph
         G_proj = ox.project_graph(G)

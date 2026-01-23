@@ -34,6 +34,11 @@ export interface GenerationRequest {
         roads?: string;
         text?: string;
     };
+    dpi?: number;
+    margins?: number;
+    paper_size?: string;
+    width?: number; // Ensure width/height are part of request
+    height?: number;
 }
 
 export interface GenerationResponse {
@@ -41,4 +46,28 @@ export interface GenerationResponse {
     files: string[];
     error?: string;
     debug?: string;
+}
+
+export interface Preset {
+    id: string;
+    name: string;
+    createdAt: number;
+    data: {
+        city: string;
+        country: string;
+        cityLabel: string;
+        countryLabel: string;
+        distance: number;
+        selectedTheme: string;
+        allThemes: boolean;
+        customLayers: CustomLayer[];
+        customColorsEnabled: boolean;
+        customColors: any;
+        exportFormat: string;
+        dpi: number;
+        margins: number;
+        paperSize: string;
+        width: number;
+        height: number;
+    };
 }

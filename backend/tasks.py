@@ -125,7 +125,8 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
             text_CONFIG={
                 'country_label': request.country_label,
                 'name_label': request.name_label
-            }
+            },
+            margins=request.margins
         )
 
         self.update_state(state='PROGRESS', meta={'current': 90, 'total': 100, 'status': 'Uploading to cloud...'})
@@ -140,7 +141,8 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
             canvas = FigureCanvasAgg(fig)
         
         buf = BytesIO()
-        canvas.print_figure(buf, format=fmt, dpi=300, bbox_inches='tight', pad_inches=0.05, facecolor=theme['bg'])
+        # Strict sizing: no bbox_tight, use exact dpi
+        canvas.print_figure(buf, format=fmt, dpi=request.dpi, facecolor=theme['bg'])
         buf.seek(0)
         
         # Upload

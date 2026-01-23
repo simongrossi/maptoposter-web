@@ -26,5 +26,10 @@ class PosterRequest(BaseModel):
     country_label: Optional[str] = None
     name_label: Optional[str] = None
     custom_layers: Optional[List[CustomLayer]] = None
-    custom_colors: Optional[CustomColors] = None # Added field
+    custom_colors: Optional[CustomColors] = None
     format: str = "png"
+    
+    # Advanced Print Settings
+    dpi: int = 300
+    margins: float = 0.0 # inches
+    paper_size: str = "custom" # metadata

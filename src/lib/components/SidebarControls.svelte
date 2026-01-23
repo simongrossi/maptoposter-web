@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
-    import type { Theme, CustomLayer } from "$lib/types";
+    import { createEventDispatcher, onMount } from "svelte";
+    import type { Theme, CustomLayer, Preset } from "$lib/types";
+    import { getPresets, savePreset, deletePreset } from "$lib/presets";
 
     // Props
     export let city: string;
@@ -15,8 +16,28 @@
     export let customColorsEnabled: boolean;
     export let customColors: any;
     export let exportFormat: string;
+    // Print Settings
+    export let dpi: number;
+    export let margins: number;
+    export let paperSize: string;
+    export let width: number;
+    export let height: number;
 
-    // Derived state for internal valid check?
+    const PAPER_SIZES = {
+        A4: { w: 8.27, h: 11.69 },
+        A3: { w: 11.69, h: 16.53 },
+        "12x16": { w: 12.0, h: 16.0 },
+        "30x40cm": { w: 11.81, h: 15.75 },
+    };
+
+    function onPaperSizeChange() {
+        // @ts-ignore
+        const size = PAPER_SIZES[paperSize];
+        if (size) {
+            width = size.w;
+            height = size.h;
+        }
+    }
     // Ideally validation is parent's job or shared store.
 
     const dispatch = createEventDispatcher();
@@ -28,9 +49,138 @@
     function onDistanceChange() {
         dispatch("distanceChange", { distance }); // Update map circle
     }
+
+    // Validation
+    $: isCityValid = city?.trim().length > 0;
+    $: isCountryValid = country?.trim().length > 0;
+    $: isDistanceValid = distance >= 1000 && distance <= 100000;
+
+    // Presets Logic
+    let presets: Preset[] = [];
+    let newPresetName = "";
+    let showPresets = false;
+
+    onMount(() => {
+        loadPresets();
+    });
+
+    function loadPresets() {
+        presets = getPresets();
+    }
+
+    function saveCurrentAsPreset() {
+        if (!newPresetName.trim()) return;
+        const newPreset: Preset = {
+            id: crypto.randomUUID(),
+            name: newPresetName.trim(),
+            createdAt: Date.now(),
+            data: {
+                city,
+                country,
+                cityLabel,
+                countryLabel,
+                distance,
+                selectedTheme,
+                allThemes,
+                customLayers: JSON.parse(JSON.stringify(customLayers)), // deep copy
+                customColorsEnabled,
+                customColors: { ...customColors },
+                exportFormat,
+                dpi,
+                margins,
+                paperSize,
+                width,
+                height,
+            },
+        };
+        savePreset(newPreset);
+        newPresetName = "";
+        loadPresets();
+    }
+
+    function loadPreset(p: Preset) {
+        city = p.data.city;
+        country = p.data.country;
+        cityLabel = p.data.cityLabel;
+        countryLabel = p.data.countryLabel;
+        distance = p.data.distance;
+        selectedTheme = p.data.selectedTheme;
+        allThemes = p.data.allThemes;
+        customLayers = p.data.customLayers || [];
+        customColorsEnabled = p.data.customColorsEnabled;
+        if (p.data.customColors) customColors = { ...p.data.customColors };
+        if (p.data.customColors) customColors = { ...p.data.customColors };
+        exportFormat = p.data.exportFormat;
+        // Backwards compat
+        dpi = p.data.dpi || 300;
+        margins = p.data.margins !== undefined ? p.data.margins : 0.5;
+        paperSize = p.data.paperSize || "12x16";
+        width = p.data.width || 12;
+        height = p.data.height || 16;
+
+        dispatch("search"); // Trigger search to update map
+    }
+
+    function removePreset(id: string) {
+        if (confirm("Supprimer ce favori ?")) {
+            deletePreset(id);
+            loadPresets();
+        }
+    }
 </script>
 
 <div class="controls-content">
+    <!-- Presets Section -->
+    <div class="section">
+        <h3
+            on:click={() => (showPresets = !showPresets)}
+            style="cursor: pointer;"
+        >
+            <span class="icon">⭐</span> Favoris
+            <span class="hint" style="margin-left: auto;"
+                >{showPresets ? "▼" : "▶"}</span
+            >
+        </h3>
+        {#if showPresets}
+            <div class="presets-container">
+                <div class="form-group row">
+                    <input
+                        type="text"
+                        bind:value={newPresetName}
+                        placeholder="Nom du favori..."
+                        style="flex:1"
+                    />
+                    <button
+                        type="button"
+                        class="btn-small"
+                        on:click={saveCurrentAsPreset}
+                        disabled={!newPresetName.trim()}>💾</button
+                    >
+                </div>
+                {#if presets.length === 0}
+                    <div class="empty-msg">Aucun favori enregistré.</div>
+                {:else}
+                    <div class="presets-list">
+                        {#each presets as p}
+                            <div class="preset-item">
+                                <span
+                                    class="preset-name"
+                                    on:click={() => loadPreset(p)}
+                                    title="Charger">{p.name}</span
+                                >
+                                <button
+                                    class="btn-icon delete"
+                                    on:click|stopPropagation={() =>
+                                        removePreset(p.id)}>🗑️</button
+                                >
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+        {/if}
+    </div>
+
     <!-- Location Section -->
     <div class="section">
         <h3><span class="icon">📍</span> Lieu</h3>
@@ -46,6 +196,9 @@
             <button type="button" class="btn-search" on:click={triggerSearch}
                 >🔍 Rechercher</button
             >
+            {#if !isCityValid && city !== undefined}
+                <span class="error-msg">Veuillez entrer une ville</span>
+            {/if}
         </div>
         <div class="form-group">
             <label for="country-input">Pays</label>
@@ -56,6 +209,9 @@
                 placeholder="Ex: France"
                 on:keydown={(e) => e.key === "Enter" && triggerSearch()}
             />
+            {#if !isCountryValid && country !== undefined}
+                <span class="error-msg">Veuillez entrer un pays</span>
+            {/if}
         </div>
     </div>
 
@@ -99,6 +255,11 @@
                 bind:value={distance}
                 on:input={onDistanceChange}
             />
+            {#if !isDistanceValid}
+                <span class="error-msg"
+                    >La distance doit être entre 1km et 100km</span
+                >
+            {/if}
         </div>
     </div>
 
@@ -229,6 +390,70 @@
                 {/if}
             </div>
         {/each}
+    </div>
+
+    <!-- Print Settings (New) -->
+    <div class="section">
+        <h3><span class="icon">🖨️</span> Impression</h3>
+        <div class="form-group">
+            <label for="paper-select">Format Papier</label>
+            <select
+                id="paper-select"
+                bind:value={paperSize}
+                on:change={onPaperSizeChange}
+            >
+                <option value="A4">A4 (21 x 29.7cm)</option>
+                <option value="A3">A3 (29.7 x 42cm)</option>
+                <option value="12x16">Standard (12x16")</option>
+                <option value="30x40cm">30 x 40 cm</option>
+                <option value="custom">Personnalisé</option>
+            </select>
+        </div>
+
+        {#if paperSize === "custom"}
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="w-input">Largeur (pouces)</label>
+                    <input
+                        id="w-input"
+                        type="number"
+                        step="0.1"
+                        bind:value={width}
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="h-input">Hauteur (pouces)</label>
+                    <input
+                        id="h-input"
+                        type="number"
+                        step="0.1"
+                        bind:value={height}
+                    />
+                </div>
+            </div>
+        {/if}
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="dpi-select">Qualité (DPI)</label>
+                <select id="dpi-select" bind:value={dpi}>
+                    <option value={150}>150 (Web/Draft)</option>
+                    <option value={300}>300 (Print)</option>
+                    <option value={600}>600 (High-Res)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="margin-input">Marge ({margins}")</label>
+                <input
+                    id="margin-input"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    bind:value={margins}
+                />
+            </div>
+        </div>
     </div>
 
     <!-- Export -->
@@ -488,5 +713,69 @@
     }
     .radio-card:hover:not(.active) {
         background: #484b51;
+    }
+    .error-msg {
+        color: #fa5252;
+        font-size: 0.75rem;
+        margin-top: 4px;
+        display: block;
+    }
+    .btn-small {
+        padding: 8px;
+        background: #373a40;
+        border: 1px solid #484b51;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-left: 8px;
+    }
+    .btn-small:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+    .row {
+        display: flex;
+        align-items: center;
+    }
+    .presets-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    .preset-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #2c2e33;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    .preset-name {
+        cursor: pointer;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .preset-name:hover {
+        color: #4dabf7;
+    }
+    .btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 0.9rem;
+    }
+    .btn-icon.delete:hover {
+        transform: scale(1.1);
+    }
+    .empty-msg {
+        font-size: 0.8rem;
+        color: #909296;
+        font-style: italic;
     }
 </style>

@@ -12,6 +12,17 @@ export async function fetchThemes(): Promise<Theme[]> {
     }
 }
 
+export async function fetchHistory(limit = 10): Promise<any[]> {
+    try {
+        const res = await fetch(`/api/history?limit=${limit}`);
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch history", e);
+        return [];
+    }
+}
+
 // Helper for Polling Architecture
 export async function generatePoster(
     payload: GenerationRequest,

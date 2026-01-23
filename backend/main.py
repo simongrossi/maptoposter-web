@@ -135,3 +135,41 @@ async def geocode_proxy(q: str):
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail="Nominatim error")
         return resp.json()
+@app.get("/history")
+async def get_history(limit: int = 10):
+    """
+    List recent generated posters from S3.
+    """
+    from backend.tasks import get_s3_client, S3_BUCKET, S3_PUBLIC_URL
+    s3 = get_s3_client()
+    
+    try:
+        # List objects
+        resp = s3.list_objects_v2(Bucket=S3_BUCKET)
+        if 'Contents' not in resp:
+            return []
+            
+        # Sort by LastModified desc
+        objects = sorted(resp['Contents'], key=lambda x: x['LastModified'], reverse=True)
+        
+        history = []
+        for obj in objects[:limit]:
+            key = obj['Key']
+            # Parse metadata from filename if possible or just return key
+            # Filename format: city_theme_hash.ext
+            parts = key.rsplit('.', 1)[0].split('_')
+            
+            # Simple heuristic
+            city = parts[0] if len(parts) > 0 else "Unknown"
+            
+            history.append({
+                "url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{key}",
+                "filename": key,
+                "date": obj['LastModified'].isoformat(),
+                "city": city.replace("-", " ").title()
+            })
+            
+        return history
+    except Exception as e:
+        print(f"History error: {e}")
+        return []

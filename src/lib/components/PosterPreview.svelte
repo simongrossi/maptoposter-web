@@ -1,13 +1,24 @@
 <script lang="ts">
-    export let files: string[] = [];
+    import { onMount } from "svelte";
+    import { fetchHistory } from "$lib/api";
+
+    export let files: string[] = []; // Current session generated
+    let history: any[] = [];
+
+    onMount(async () => {
+        history = await fetchHistory();
+    });
 </script>
 
 <div class="results-container">
-    <h4>Affiches récentes</h4>
+    <h4>Affiches récemments générées</h4>
+
+    <!-- Current Session -->
     {#if files.length > 0}
+        <div class="section-title">Cette session</div>
         <div class="posters-scroll">
             {#each files as file}
-                <div class="mini-card">
+                <div class="mini-card new">
                     <span class="filename" title={file}
                         >{file.split("/").pop()}</span
                     >
@@ -18,7 +29,34 @@
                 </div>
             {/each}
         </div>
-    {:else}
+    {/if}
+
+    <!-- History -->
+    {#if history.length > 0}
+        <div class="section-title">Historique global</div>
+        <div class="posters-scroll history-list">
+            {#each history as item}
+                <div class="mini-card">
+                    <div class="details">
+                        <span class="city">{item.city}</span>
+                        <span class="date"
+                            >{new Date(item.date).toLocaleDateString()}</span
+                        >
+                    </div>
+                    <div class="actions">
+                        <a href={item.url} target="_blank" title="Voir">👁️</a>
+                        <button
+                            class="btn-copy"
+                            title="Copier le lien"
+                            on:click={() =>
+                                navigator.clipboard.writeText(item.url)}
+                            >📋</button
+                        >
+                    </div>
+                </div>
+            {/each}
+        </div>
+    {:else if files.length === 0}
         <div class="empty-state">Aucune affiche pour le moment.</div>
     {/if}
 </div>

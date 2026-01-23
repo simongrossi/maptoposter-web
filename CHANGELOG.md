@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-01-23
+
+### Added
+- **Presets / Favorites**: User can now save, load, and delete favorite configurations (City, Theme, Layers...) locally in the browser.
+- **Backend History**: New `/history` endpoint listing recent global generations directly from S3.
+- **Advanced Print Settings**:
+  - Support for **A4, A3, 30x40cm** and **Custom** paper sizes.
+  - **DPI Selection** (150, 300, 600) for professional printing.
+  - **Margins Control**: Precise margin adjustments in inches.
+- **Improved Validation**: Strict validation for inputs with inline error messages.
+- **Polling Transparency**: Translated and granular status updates during generation.
+
+### Changed
+- **UX**: Replaced native `alert()` with non-blocking UI error banners.
+- **CI**: Upgraded CI workflows and Docker images to **Node.js 22** for Vite 6 compatibility.
+- **Accessibility**: Added ARIA attributes and improved mobile UX (bouncing badge).
+
 ## [2.0.0] - 2026-01-23
 
 **Major Industrialization & Cloud-Native Refactor**

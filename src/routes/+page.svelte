@@ -12,6 +12,8 @@
         CustomLayer,
     } from "$lib/types";
     import { fetchThemes, generatePoster } from "$lib/api";
+    import { t, getStatusLabel } from "$lib/i18n";
+    import { fade } from "svelte/transition"; // Added for mobile badge transition if needed
 
     // Interfaces
     interface MapComponent {
@@ -33,7 +35,13 @@
     let themes: Theme[] = [];
 
     // Export State
+    // Export State
     let exportFormat = "png";
+    let dpi = 300;
+    let margins = 0.5;
+    let paperSize = "12x16";
+    let width = 12.0;
+    let height = 16.0;
 
     // Custom Layers
     let customLayers: CustomLayer[] = [
@@ -133,6 +141,15 @@
         if (co && co !== country) country = co;
     }
 
+    // Handle map errors
+    function handleMapError(event: CustomEvent) {
+        errorMsg = event.detail.message;
+        // Auto-hide after 5s if desired, or keep it.
+        setTimeout(() => {
+            errorMsg = "";
+        }, 5000);
+    }
+
     // Also update circle when distance changes (Sidebar -> Parent -> Map)
     // distance is 2-way bound. MapSelector takes {distance} prop. Svelte handles it.
 
@@ -141,7 +158,9 @@
             abortController.abort();
             abortController = null;
             loading = false;
-            progressText = "Annulé par l'utilisateur";
+            abortController = null;
+            loading = false;
+            progressText = t.errors.generationCancelled;
         }
     }
 
@@ -166,14 +185,21 @@
             allThemes: allThemes,
             customLayers: customLayers, // Send custom layers
             customColors: customColorsEnabled ? customColors : undefined,
+
             format: exportFormat,
+            dpi,
+            margins,
+            paper_size: paperSize,
+            width,
+            height,
         };
 
         const result = await generatePoster(
             payload,
             (percent, text) => {
                 progressPercent = percent;
-                progressText = text;
+                // Use getStatusLabel to translate or fallback
+                progressText = getStatusLabel(text);
             },
             abortController.signal,
         );
@@ -185,9 +211,18 @@
             generatedFiles = result.files;
             // Scroll to results logic if needed
         } else {
-            errorMsg = result.error || "Une erreur est survenue.";
+            errorMsg = result.error || t.errors.unknownError;
         }
     }
+
+    // Validation
+    $: isValid =
+        city &&
+        city.trim().length > 0 &&
+        country &&
+        country.trim().length > 0 &&
+        distance >= 1000 &&
+        distance <= 100000;
 </script>
 
 <div class="app-container">
@@ -216,6 +251,11 @@
                 bind:customColorsEnabled
                 bind:customColors
                 bind:exportFormat
+                bind:dpi
+                bind:margins
+                bind:paperSize
+                bind:width
+                bind:height
                 on:search={handleSearch}
             />
 
@@ -227,7 +267,7 @@
                     on:cancel={cancelGeneration}
                 />
             {:else}
-                <button type="submit" class="btn-generate">
+                <button type="submit" class="btn-generate" disabled={!isValid}>
                     ✨ Générer l'affiche
                 </button>
             {/if}
@@ -252,12 +292,16 @@
     <main class="map-area">
         <button class="mobile-toggle" on:click={() => (mobileMenuOpen = true)}>
             ⚙️ Paramètres
+            {#if !mobileMenuOpen}
+                <span class="settings-dot"></span>
+            {/if}
         </button>
         <MapSelector
             bind:this={mapComponent}
             {distance}
             themeId={selectedTheme}
             on:locationSelect={handleLocationSelect}
+            on:error={handleMapError}
         />
         <div class="map-overlay">
             <div class="info-badge">Aperçu de la zone de couverture</div>
@@ -356,9 +400,15 @@
         margin-top: 10px;
     }
 
-    .btn-generate:hover {
+    .btn-generate:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(51, 154, 240, 0.3);
+    }
+
+    .btn-generate:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #373a40;
     }
 
     .error-banner {
@@ -462,6 +512,31 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         align-items: center;
         gap: 8px;
+        animation: bounce 2s infinite;
+    }
+
+    .settings-dot {
+        width: 8px;
+        height: 8px;
+        background: #fa5252;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    @keyframes bounce {
+        0%,
+        20%,
+        50%,
+        80%,
+        100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-5px);
+        }
+        60% {
+            transform: translateY(-3px);
+        }
     }
 
     .sidebar-close {

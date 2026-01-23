@@ -2,6 +2,7 @@
     import { onMount, createEventDispatcher } from "svelte";
     import { browser } from "$app/environment";
     import type * as L from "leaflet"; // Import definitions
+    import { t } from "$lib/i18n";
 
     export let initialDefaults = { lat: 48.8566, lng: 2.3522 }; // Paris default
     export let distance: number = 10000;
@@ -216,12 +217,12 @@
                     isProgrammaticMove = false;
                 }, 1000);
             } else {
-                alert("Lieu introuvable sur OpenStreetMap.");
+                dispatch("error", { message: t.errors.locationNotFound });
                 console.warn("Geocoding returned no results for:", query);
             }
         } catch (e) {
             console.error("Forward geocoding failed", e);
-            alert("Erreur lors de la recherche du lieu.");
+            dispatch("error", { message: t.errors.geocodingError });
         }
     }
 
