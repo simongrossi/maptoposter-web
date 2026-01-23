@@ -333,7 +333,16 @@
         </form>
 
         <footer class="sidebar-footer">
-            <a href="/about">
+            <div class="credits">
+                <span class="made-by"
+                    >Développé par <a
+                        href="https://github.com/simongrossi"
+                        target="_blank"
+                        rel="noopener">Simon Grossi</a
+                    ></span
+                >
+            </div>
+            <a href="/about" class="about-link">
                 <span class="icon">ℹ️</span> À propos & Crédits
             </a>
         </footer>
@@ -514,6 +523,23 @@
     }
 
     .sidebar-footer a:hover {
+        color: #4dabf7;
+    }
+
+    .credits {
+        margin-bottom: 8px;
+        font-size: 0.8rem;
+        color: #909296;
+    }
+
+    .made-by a {
+        color: #e0e0e0;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        font-weight: 500;
+    }
+
+    .made-by a:hover {
         color: #4dabf7;
     }
     /* Responsive Styles */

@@ -118,6 +118,14 @@ npx playwright test # E2E
 
 ---
 
+---
+
+## 👨‍💻 Auteur
+
+Développé par **Simon Grossi**.
+
+---
+
 ## 📜 License
 
 MIT License.
