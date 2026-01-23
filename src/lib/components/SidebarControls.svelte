@@ -35,8 +35,9 @@
     <div class="section">
         <h3><span class="icon">📍</span> Lieu</h3>
         <div class="form-group">
-            <label>Ville</label>
+            <label for="city-input">Ville</label>
             <input
+                id="city-input"
                 type="text"
                 bind:value={city}
                 placeholder="Ex: Paris"
@@ -47,8 +48,9 @@
             >
         </div>
         <div class="form-group">
-            <label>Pays</label>
+            <label for="country-input">Pays</label>
             <input
+                id="country-input"
                 type="text"
                 bind:value={country}
                 placeholder="Ex: France"
@@ -62,12 +64,18 @@
         <h3><span class="icon">🏷️</span> Textes</h3>
         <div class="grid-2">
             <div class="form-group">
-                <label>Titre (Ville)</label>
-                <input type="text" bind:value={cityLabel} placeholder={city} />
+                <label for="city-label">Titre (Ville)</label>
+                <input
+                    id="city-label"
+                    type="text"
+                    bind:value={cityLabel}
+                    placeholder={city}
+                />
             </div>
             <div class="form-group">
-                <label>Sous-titre (Pays)</label>
+                <label for="country-label">Sous-titre (Pays)</label>
                 <input
+                    id="country-label"
                     type="text"
                     bind:value={countryLabel}
                     placeholder={country}
@@ -98,11 +106,15 @@
     <div class="section">
         <h3><span class="icon">🎨</span> Style</h3>
         <div class="form-group">
-            <label>Thème</label>
+            <label for="theme-select">Thème</label>
             {#if themes.length === 0}
                 <div class="loading-themes">Chargement...</div>
             {:else}
-                <select bind:value={selectedTheme} disabled={allThemes}>
+                <select
+                    id="theme-select"
+                    bind:value={selectedTheme}
+                    disabled={allThemes}
+                >
                     {#each themes as theme}
                         <option value={theme.id}>
                             {theme.name}
@@ -136,24 +148,44 @@
         {#if customColorsEnabled}
             <div class="color-grid">
                 <div class="color-item">
-                    <label>Fond</label>
-                    <input type="color" bind:value={customColors.bg} />
+                    <label for="color-bg">Fond</label>
+                    <input
+                        id="color-bg"
+                        type="color"
+                        bind:value={customColors.bg}
+                    />
                 </div>
                 <div class="color-item">
-                    <label>Eau</label>
-                    <input type="color" bind:value={customColors.water} />
+                    <label for="color-water">Eau</label>
+                    <input
+                        id="color-water"
+                        type="color"
+                        bind:value={customColors.water}
+                    />
                 </div>
                 <div class="color-item">
-                    <label>Parcs</label>
-                    <input type="color" bind:value={customColors.parks} />
+                    <label for="color-parks">Parcs</label>
+                    <input
+                        id="color-parks"
+                        type="color"
+                        bind:value={customColors.parks}
+                    />
                 </div>
                 <div class="color-item">
-                    <label>Routes</label>
-                    <input type="color" bind:value={customColors.roads} />
+                    <label for="color-roads">Routes</label>
+                    <input
+                        id="color-roads"
+                        type="color"
+                        bind:value={customColors.roads}
+                    />
                 </div>
                 <div class="color-item">
-                    <label>Texte</label>
-                    <input type="color" bind:value={customColors.text} />
+                    <label for="color-text">Texte</label>
+                    <input
+                        id="color-text"
+                        type="color"
+                        bind:value={customColors.text}
+                    />
                 </div>
             </div>
         {/if}
@@ -203,7 +235,7 @@
     <div class="section">
         <h3><span class="icon">💾</span> Export</h3>
         <div class="form-group">
-            <label>Format de fichier</label>
+            <span class="label">Format de fichier</span>
             <div class="format-idx">
                 {#each ["png", "svg", "pdf"] as f}
                     <label
@@ -245,7 +277,8 @@
     .form-group {
         margin-bottom: 16px;
     }
-    label {
+    label,
+    .label {
         display: block;
         font-size: 0.85rem;
         margin-bottom: 6px;
