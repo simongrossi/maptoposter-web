@@ -77,8 +77,9 @@ The only requirement is **Docker** and **Docker Compose**.
    *Wait a few minutes for the initial build and Python dependency installation.*
 
 3. **Access the App**
-   - Application: **[http://localhost](http://localhost)**
-   - MinIO Console: [http://localhost:9001](http://localhost:9001) (User: `minioadmin` / Pass: `minioadminpassword`)
+   - 🌍 **Web App**: **[http://localhost](http://localhost)** (Standard Port 80, proxied by Nginx)
+   - ⚙️ **API Docs**: [http://localhost/api/docs](http://localhost/api/docs)
+   - 🪣 **MinIO Console**: [http://localhost:9001](http://localhost:9001) (User: `minioadmin` / Pass: `minioadminpassword`)
 
 ---
 
