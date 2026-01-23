@@ -48,6 +48,14 @@ graph TD
 - **Queue**: Redis.
 - **Gateway**: Nginx. Handles security headers, routing, and caching.
 
+## 📚 Documentation Technique
+
+Pour aller plus loin dans la compréhension du code :
+
+- [**Architecture Globale**](./ARCHITECTURE.md) : Vue détaillée du flux de données.
+- [**Frontend Guide**](./src/README.md) : Structure SvelteKit, Composants, Map Logic.
+- [**Backend Guide**](./backend/README.md) : FastAPI, Celery, Matplotlib Renderer.
+
 ---
 
 ## 🚀 Getting Started
