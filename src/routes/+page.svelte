@@ -323,9 +323,9 @@
 
     .controls {
         padding: 24px;
-        flex-shrink: 0; /* Let list take space */
-        max-height: 60vh; /* Allow scroll if needed on small screens? */
+        flex: 1;
         overflow-y: auto;
+        min-height: 0;
     }
 
     /* Scrollbar for controls area */
