@@ -9,7 +9,7 @@ COPY . .
 # Note: User must ensure adapter-node is used for Docker environment
 RUN npm run build
 # Prune dev dependencies for cleaner image
-RUN npm prune --production
+RUN npm prune --production --legacy-peer-deps
 
 # --- Final Stage ---
 FROM node:20-alpine
