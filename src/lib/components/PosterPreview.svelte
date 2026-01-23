@@ -2,9 +2,9 @@
     export let files: string[] = [];
 </script>
 
-{#if files.length > 0}
-    <div class="results-list">
-        <h4>Affiches récentes</h4>
+<div class="results-container">
+    <h4>Affiches récentes</h4>
+    {#if files.length > 0}
         <div class="posters-scroll">
             {#each files as file}
                 <div class="mini-card">
@@ -18,17 +18,24 @@
                 </div>
             {/each}
         </div>
-    </div>
-{/if}
+    {:else}
+        <div class="empty-state">Aucune affiche pour le moment.</div>
+    {/if}
+</div>
 
 <style>
-    .results-list {
+    .results-container {
         margin-top: 24px;
-        padding: 0 24px;
-        flex: 1; /* Take remaining space */
-        min-height: 0; /* Enable scrolling inside flex item */
-        display: flex;
-        flex-direction: column;
+        padding-top: 16px;
+        border-top: 1px solid #2c2e33;
+    }
+
+    .empty-state {
+        color: #5c5f66;
+        font-size: 0.85rem;
+        font-style: italic;
+        text-align: center;
+        padding: 12px;
     }
 
     h4 {

@@ -7,7 +7,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - posters_volume:/app/static/posters
+      # - posters_volume:/app/static/posters # Not needed for proxy, but kept if alias used
     depends_on:
       - api
       - web
@@ -33,13 +33,16 @@ services:
     volumes:
       - minio_data:/data
 
-  # Auto-create bucket
   createbuckets:
     image: minio/mc
+    container_name: maptoposter-createbuckets
     depends_on:
       - minio
     entrypoint: >
-      /bin/sh -c " /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadminpassword; /usr/bin/mc mb myminio/posters; /usr/bin/mc policy set public myminio/posters; exit 0; "
+      /bin/sh -c " echo 'Waiting for MinIO...'; until /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadminpassword; do
+         echo 'MinIO not ready, retrying...';
+         sleep 2;
+      done; echo 'MinIO ready. Creating bucket...'; /usr/bin/mc mb myminio/posters --ignore-existing; echo 'Setting public policy (Download)...'; /usr/bin/mc anonymous set download myminio/posters; echo 'MinIO Setup Complete.'; exit 0; "
 
   # 3. Task Worker (Heavy Lifting)
   worker:
@@ -50,7 +53,7 @@ services:
     command: celery -A backend.tasks worker --loglevel=info
     volumes:
       - osm_cache:/.cache
-      - posters_volume:/app/static/posters
+      # - posters_volume:/app/static/posters # Not used anymore, direct S3 upload
     environment:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONUNBUFFERED=1
@@ -70,9 +73,6 @@ services:
       dockerfile: backend/Dockerfile
     container_name: maptoposter-api
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
-    volumes:
-      # API doesn't strictly need cache/posters anymore but good for debug
-      - posters_volume:/app/static/posters
     environment:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONUNBUFFERED=1
@@ -86,18 +86,7 @@ services:
       dockerfile: frontend.Dockerfile
     container_name: maptoposter-web
     environment:
-      # Now frontend talks to Nginx or direct API? 
-      # Since we are inside docker network, it can talk to API directly for SSR
-      # But client-side fetch goes to Nginx.
-      # SvelteKit SSR fetch:
       - API_URL=http://api:8000
-      # Posters are served by Nginx now, so SvelteKit does NOT need to serve them.
-      # But server-side code might check existence? 
-      # If we keep the +server.ts proxy, it needs the volume.
-      # Ideally we bypass node for files.
-      - POSTERS_DIR=/app/static/posters
-    volumes:
-      - posters_volume:/app/static/posters
     depends_on:
       - api
 

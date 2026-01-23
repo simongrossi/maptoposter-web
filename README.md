@@ -74,7 +74,8 @@ The only requirement is **Docker** and **Docker Compose**.
    ```bash
    docker-compose up --build
    ```
-   *Wait a few minutes for the initial build and Python dependency installation.*
+   *Note: The system will automatically configure the database and storage (MinIO) on the first run. No manual setup required.*
+
 
 3. **Access the App**
    - 🌍 **Web App**: **[http://localhost](http://localhost)** (Standard Port 80, proxied by Nginx)
