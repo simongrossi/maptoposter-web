@@ -112,3 +112,26 @@ async def get_task_status(task_id: str):
 
 # Legacy Stream Endpoint (Removed/Deprecated)
 # The frontend must migrate to polling /tasks/{id}
+
+import httpx
+
+@app.get("/geocode")
+async def geocode_proxy(q: str):
+    """
+    Proxy to Nominatim to bypass CORS/User-Agent browser restrictions.
+    """
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {
+        "format": "json",
+        "q": q,
+        "limit": 1
+    }
+    headers = {
+        "User-Agent": "MapPoster/2.0 (Backend Proxy)"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, params=params, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Nominatim error")
+        return resp.json()

@@ -196,10 +196,9 @@
         if (!map) return;
 
         try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-            const res = await fetch(url, {
-                headers: { "User-Agent": "MapToPosterClient/1.0" },
-            });
+            // Use Backend Proxy to avoid CORS/User-Agent issues
+            const url = `/api/geocode?q=${encodeURIComponent(query)}`;
+            const res = await fetch(url);
             const data = await res.json();
 
             if (data && data.length > 0) {

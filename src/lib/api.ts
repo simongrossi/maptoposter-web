@@ -67,7 +67,7 @@ export async function generatePoster(
                 const result = task.result;
                 return {
                     success: true,
-                    files: result.file_url ? [result.file_url.split('/').pop()] : [], // Extract filename
+                    files: result.file_url ? [result.file_url] : [], // Use full URL from S3
                     debug: JSON.stringify(result)
                 };
             } else if (task.status === 'FAILURE') {

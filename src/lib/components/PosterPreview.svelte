@@ -8,14 +8,12 @@
         <div class="posters-scroll">
             {#each files as file}
                 <div class="mini-card">
-                    <span class="filename" title={file}>{file}</span>
+                    <span class="filename" title={file}
+                        >{file.split("/").pop()}</span
+                    >
                     <div class="actions">
-                        <a href="/posters/{file}" target="_blank" title="Voir"
-                            >👁️</a
-                        >
-                        <a href="/posters/{file}" download title="Télécharger"
-                            >⬇️</a
-                        >
+                        <a href={file} target="_blank" title="Voir">👁️</a>
+                        <a href={file} download title="Télécharger">⬇️</a>
                     </div>
                 </div>
             {/each}
