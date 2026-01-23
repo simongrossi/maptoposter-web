@@ -154,7 +154,7 @@ async def get_history(request: Request, limit: int = 10):
     """
     List recent generated posters from S3.
     """
-    from backend.tasks import get_s3_client, S3_BUCKET, S3_PUBLIC_URL
+    from backend.tasks import get_s3_client, build_public_url, S3_BUCKET
     s3 = get_s3_client()
     base_url = S3_PUBLIC_URL.rstrip("/")
     if base_url.startswith("/"):
