@@ -216,9 +216,13 @@
                 setTimeout(() => {
                     isProgrammaticMove = false;
                 }, 1000);
+            } else {
+                alert("Lieu introuvable sur OpenStreetMap.");
+                console.warn("Geocoding returned no results for:", query);
             }
         } catch (e) {
             console.error("Forward geocoding failed", e);
+            alert("Erreur lors de la recherche du lieu.");
         }
     }
 
