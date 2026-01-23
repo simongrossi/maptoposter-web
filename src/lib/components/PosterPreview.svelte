@@ -23,8 +23,17 @@
                         >{file.split("/").pop()}</span
                     >
                     <div class="actions">
-                        <a href={file} target="_blank" title="Voir">👁️</a>
-                        <a href={file} download title="Télécharger">⬇️</a>
+                        {#if file.endsWith(".zip")}
+                            <a
+                                href={file}
+                                class="zip-btn"
+                                download
+                                title="Télécharger le pack ZIP">📦 ZIP</a
+                            >
+                        {:else}
+                            <a href={file} target="_blank" title="Voir">👁️</a>
+                            <a href={file} download title="Télécharger">⬇️</a>
+                        {/if}
                     </div>
                 </div>
             {/each}
@@ -133,5 +142,17 @@
 
     .actions a:hover {
         color: white;
+    }
+
+    .zip-btn {
+        background: #4dabf7;
+        color: white !important;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem !important;
+        font-weight: 600;
+    }
+    .zip-btn:hover {
+        background: #339af0;
     }
 </style>

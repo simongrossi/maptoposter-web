@@ -20,6 +20,7 @@ class PosterRequest(BaseModel):
     city: str
     country: str
     style: str = "feature_based"  # Refers to theme
+    all_themes: bool = False
     distance: int = 10000
     width: float = 12.0
     height: float = 16.0

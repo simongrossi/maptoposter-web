@@ -15,6 +15,7 @@ MapPoster is a modern, microservices-based web application that generates high-r
 - **Artistic Themes**: Pre-defined styles (Noir, Minimal, Blueprint, Sunset) + **Custom Colors** dashboard.
 - **High Resolution**: Exports print-ready PNG, SVG, or PDF files.
 - **Custom Layers**: Toggle extra details (Cycle paths, Subways, Railways, Rivers).
+- **Bulk Export**: Generate all themes at once (ZIP pack).
 - **Pro Print & Export**: Configure **Paper Size** (A4, A3, Custom), **DPI** (up to 600), and **Margins**.
 - **Favorites**: Save and reload your best map configurations instantly.
 - **Global History**: View and download recently generated posters from the community.

@@ -47,7 +47,14 @@ def load_theme(theme_name: str) -> Dict[str, Any]:
             return json.load(f)
     except Exception as e:
         print(f"Error loading theme {theme_name}: {e}")
+    except Exception as e:
+        print(f"Error loading theme {theme_name}: {e}")
         return {}
+
+def list_themes() -> list[str]:
+    """List all available theme IDs."""
+    if not THEMES_DIR.exists(): return []
+    return [f.stem for f in THEMES_DIR.glob("*.json")]
 
 async def get_coordinates(city: str, country: str) -> Tuple[float, float]:
     """

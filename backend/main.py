@@ -110,6 +110,20 @@ async def get_task_status(task_id: str):
         
     return response
 
+@app.get("/download/{task_id}")
+async def download_task_result(task_id: str):
+    """
+    Redirect to the generated file URL (S3).
+    """
+    res = AsyncResult(task_id)
+    if res.state == 'SUCCESS':
+         url = res.result.get('file_url')
+         if url:
+             from fastapi.responses import RedirectResponse
+             return RedirectResponse(url)
+    
+    raise HTTPException(status_code=404, detail="Result not ready or not found")
+
 # Legacy Stream Endpoint (Removed/Deprecated)
 # The frontend must migrate to polling /tasks/{id}
 

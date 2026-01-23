@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Presets / Favorites**: User can now save, load, and delete favorite configurations (City, Theme, Layers...) locally in the browser.
 - **Backend History**: New `/history` endpoint listing recent global generations directly from S3.
+- **Bulk Export**: Generate posters for ALL themes in a single click.
+  - Optimized "Fetch Once, Render Loop" pipeline.
+  - Delivers a single **ZIP archive** containing all variations.
 - **Advanced Print Settings**:
   - Support for **A4, A3, 30x40cm** and **Custom** paper sizes.
   - **DPI Selection** (150, 300, 600) for professional printing.
