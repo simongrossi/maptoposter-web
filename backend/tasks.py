@@ -54,8 +54,13 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
             return value
             
         safe_city = slugify(request.city)
-        filename = f"{safe_city}_{request.style}_{req_hash[:8]}.{request.format.lower()}"
-        file_key = f"{filename}" # Key in bucket
+        if request.all_themes:
+            # Hash includes 'ALL_THEMES' implicitly via model_dump, but file extension differs
+            filename = f"{safe_city}_ALL_THEMES_{req_hash[:8]}.zip"
+        else:
+            filename = f"{safe_city}_{request.style}_{req_hash[:8]}.{request.format.lower()}"
+        
+        file_key = filename
         
         s3 = get_s3_client()
         
