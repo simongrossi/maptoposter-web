@@ -39,10 +39,32 @@ export async function generatePoster(
         });
 
         if (!res.ok) {
+            const fallback = `Erreur serveur: ${res.status} ${res.statusText}`;
+            let detail = "";
+            try {
+                const data = await res.json();
+                detail = data?.detail || data?.message || "";
+            } catch {
+                detail = "";
+            }
+            if (res.status === 429) {
+                return {
+                    success: false,
+                    files: [],
+                    error: "Quota atteint. Veuillez réessayer dans quelques minutes."
+                };
+            }
+            if (res.status === 422) {
+                return {
+                    success: false,
+                    files: [],
+                    error: "Paramètres invalides. Vérifiez la taille, la distance et le format."
+                };
+            }
             return {
                 success: false,
                 files: [],
-                error: `Erreur serveur: ${res.status} ${res.statusText}`
+                error: detail ? `${fallback} — ${detail}` : fallback
             };
         }
 
@@ -82,7 +104,16 @@ export async function generatePoster(
                     debug: JSON.stringify(result)
                 };
             } else if (task.status === 'FAILURE') {
-                return { success: false, files: [], error: task.error || "Erreur inconnue" };
+                const rawError = task.error || "Erreur inconnue";
+                let message = rawError;
+                if (typeof rawError === "string") {
+                    if (rawError.includes("No map data found") || rawError.includes("Could not retrieve map data")) {
+                        message = "Aucune donnée OSM disponible pour cette zone. Essayez une distance plus petite.";
+                    } else if (rawError.includes("Nominatim")) {
+                        message = "Le service de géocodage est temporairement indisponible. Réessayez plus tard.";
+                    }
+                }
+                return { success: false, files: [], error: message };
             }
         }
 

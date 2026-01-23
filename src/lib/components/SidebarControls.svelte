@@ -30,6 +30,20 @@
         "30x40cm": { w: 11.81, h: 15.75 },
     };
 
+    const PAPER_SIZE_LABELS: Record<string, string> = {
+        A4: "A4 (21 x 29,7 cm)",
+        A3: "A3 (29,7 x 42 cm)",
+        "12x16": 'Standard (12x16")',
+        "30x40cm": "30 x 40 cm",
+        custom: "Personnalisé",
+    };
+
+    $: activePaperSize = PAPER_SIZES[paperSize] || { w: width, h: height };
+    $: paperRatio =
+        activePaperSize && activePaperSize.h
+            ? (activePaperSize.w / activePaperSize.h).toFixed(2)
+            : "1.00";
+
     function onPaperSizeChange() {
         // @ts-ignore
         const size = PAPER_SIZES[paperSize];
@@ -254,6 +268,7 @@
                 step="500"
                 bind:value={distance}
                 on:input={onDistanceChange}
+                aria-label="Distance de génération de la carte"
             />
             {#if !isDistanceValid}
                 <span class="error-msg"
@@ -314,6 +329,7 @@
                         id="color-bg"
                         type="color"
                         bind:value={customColors.bg}
+                        aria-label="Couleur de fond"
                     />
                 </div>
                 <div class="color-item">
@@ -322,6 +338,7 @@
                         id="color-water"
                         type="color"
                         bind:value={customColors.water}
+                        aria-label="Couleur de l'eau"
                     />
                 </div>
                 <div class="color-item">
@@ -330,6 +347,7 @@
                         id="color-parks"
                         type="color"
                         bind:value={customColors.parks}
+                        aria-label="Couleur des parcs"
                     />
                 </div>
                 <div class="color-item">
@@ -338,6 +356,7 @@
                         id="color-roads"
                         type="color"
                         bind:value={customColors.roads}
+                        aria-label="Couleur des routes"
                     />
                 </div>
                 <div class="color-item">
@@ -346,6 +365,7 @@
                         id="color-text"
                         type="color"
                         bind:value={customColors.text}
+                        aria-label="Couleur du texte"
                     />
                 </div>
             </div>
@@ -372,6 +392,7 @@
                             bind:value={layer.color}
                             class="color-picker"
                             title="Couleur"
+                            aria-label={`Couleur pour ${layer.label}`}
                         />
                         <div
                             class="width-control"
@@ -383,6 +404,7 @@
                                 max="5"
                                 step="0.5"
                                 bind:value={layer.width}
+                                aria-label={`Épaisseur pour ${layer.label}`}
                             />
                             <span class="value">{layer.width}</span>
                         </div>
@@ -410,6 +432,25 @@
             </select>
         </div>
 
+        <div class="paper-preview">
+            <div class="paper-preview-header">
+                <span>Aperçu du ratio</span>
+                <span class="paper-preview-meta"
+                    >{PAPER_SIZE_LABELS[paperSize] ||
+                        `Custom ${width}" x ${height}"`}</span
+                >
+            </div>
+            <div class="paper-preview-frame">
+                <div
+                    class="paper-preview-sheet"
+                    style={`aspect-ratio: ${paperRatio};`}
+                ></div>
+            </div>
+            <div class="paper-preview-foot">
+                Ratio: {paperRatio}
+            </div>
+        </div>
+
         {#if paperSize === "custom"}
             <div class="grid-2">
                 <div class="form-group">
@@ -419,6 +460,7 @@
                         type="number"
                         step="0.1"
                         bind:value={width}
+                        aria-label="Largeur personnalisée en pouces"
                     />
                 </div>
                 <div class="form-group">
@@ -428,6 +470,7 @@
                         type="number"
                         step="0.1"
                         bind:value={height}
+                        aria-label="Hauteur personnalisée en pouces"
                     />
                 </div>
             </div>
@@ -451,6 +494,7 @@
                     max="2"
                     step="0.1"
                     bind:value={margins}
+                    aria-label="Marge d'impression"
                 />
             </div>
         </div>
@@ -689,6 +733,49 @@
         display: flex;
         gap: 8px;
         margin-top: 8px;
+    }
+    .paper-preview {
+        background: #1f2024;
+        border: 1px solid #2c2e33;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    .paper-preview-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: #adb5bd;
+        margin-bottom: 10px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .paper-preview-meta {
+        color: #74c0fc;
+        font-weight: 600;
+    }
+    .paper-preview-frame {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #25262b;
+        border-radius: 6px;
+        padding: 12px;
+        min-height: 120px;
+    }
+    .paper-preview-sheet {
+        width: 100%;
+        max-width: 140px;
+        background: #3b3f46;
+        border: 1px solid #4dabf7;
+        border-radius: 4px;
+        box-shadow: inset 0 0 0 2px rgba(77, 171, 247, 0.15);
+    }
+    .paper-preview-foot {
+        margin-top: 8px;
+        font-size: 0.75rem;
+        color: #909296;
+        text-align: center;
     }
     .radio-card {
         flex: 1;

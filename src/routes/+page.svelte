@@ -104,6 +104,9 @@
     // Progress State
     let progressPercent = 0;
     let progressText = "";
+    let progressEtaText = "";
+    let generationStart = 0;
+    let smoothedEtaSeconds: number | null = null;
     let abortController: AbortController | null = null;
 
     // Debounce for forward geocoding
@@ -158,10 +161,28 @@
             abortController.abort();
             abortController = null;
             loading = false;
-            abortController = null;
-            loading = false;
             progressText = t.errors.generationCancelled;
+            progressEtaText = "";
+            smoothedEtaSeconds = null;
         }
+    }
+
+    function estimateTotalSeconds() {
+        const sizeFactor = Math.max(1, (width * height) / 200);
+        const distanceFactor = Math.max(1, distance / 10000);
+        const dpiFactor = Math.max(1, dpi / 300);
+        const themeFactor = allThemes ? 2.2 : 1;
+        return Math.round(
+            18 * sizeFactor * distanceFactor * dpiFactor * themeFactor,
+        );
+    }
+
+    function formatDuration(seconds: number) {
+        const clamped = Math.max(0, Math.round(seconds));
+        const mins = Math.floor(clamped / 60);
+        const secs = clamped % 60;
+        if (mins <= 0) return `${secs}s`;
+        return `${mins}m ${secs}s`;
     }
 
     async function handleSubmit() {
@@ -172,6 +193,9 @@
         generatedFiles = [];
         progressPercent = 0;
         progressText = "Démarrage...";
+        progressEtaText = "";
+        generationStart = Date.now();
+        smoothedEtaSeconds = null;
 
         abortController = new AbortController();
 
@@ -200,6 +224,31 @@
                 progressPercent = percent;
                 // Use getStatusLabel to translate or fallback
                 progressText = getStatusLabel(text);
+
+                if (percent > 0 && percent < 100) {
+                    const elapsed = (Date.now() - generationStart) / 1000;
+                    const progressRatio = percent / 100;
+                    let remaining = 0;
+
+                    if (progressRatio >= 0.06) {
+                        const estimatedTotal = elapsed / progressRatio;
+                        remaining = Math.max(0, estimatedTotal - elapsed);
+                    } else {
+                        const fallbackTotal = estimateTotalSeconds();
+                        remaining = Math.max(0, fallbackTotal - elapsed);
+                    }
+
+                    smoothedEtaSeconds =
+                        smoothedEtaSeconds === null
+                            ? remaining
+                            : smoothedEtaSeconds * 0.7 + remaining * 0.3;
+
+                    progressEtaText = `Temps restant estimé : ${formatDuration(
+                        smoothedEtaSeconds,
+                    )}`;
+                } else {
+                    progressEtaText = "";
+                }
             },
             abortController.signal,
         );
@@ -264,6 +313,7 @@
                 <GenerationProgress
                     {progressPercent}
                     {progressText}
+                    etaText={progressEtaText}
                     on:cancel={cancelGeneration}
                 />
             {:else}

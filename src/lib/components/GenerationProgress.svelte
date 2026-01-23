@@ -2,9 +2,9 @@
     import { createEventDispatcher } from "svelte";
 
     // Props
-    export let loading = false;
     export let progressPercent = 0;
     export let progressText = "";
+    export let etaText = "";
 
     const dispatch = createEventDispatcher();
 
@@ -18,6 +18,9 @@
         <span class="progress-text">{progressText}</span>
         <span class="progress-percent">{Math.round(progressPercent)}%</span>
     </div>
+    {#if etaText}
+        <div class="progress-eta">{etaText}</div>
+    {/if}
     <div class="progress-bar-bg">
         <div class="progress-bar-fill" style="width: {progressPercent}%"></div>
     </div>
@@ -38,6 +41,11 @@
         font-size: 0.85rem;
         color: #c1c2c5;
         margin-bottom: 6px;
+    }
+    .progress-eta {
+        font-size: 0.8rem;
+        color: #909296;
+        margin-bottom: 8px;
     }
 
     .progress-bar-bg {
