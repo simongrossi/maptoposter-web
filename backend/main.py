@@ -150,12 +150,17 @@ async def geocode_proxy(q: str):
             raise HTTPException(status_code=resp.status_code, detail="Nominatim error")
         return resp.json()
 @app.get("/history")
-async def get_history(limit: int = 10):
+async def get_history(request: Request, limit: int = 10):
     """
     List recent generated posters from S3.
     """
     from backend.tasks import get_s3_client, S3_BUCKET, S3_PUBLIC_URL
     s3 = get_s3_client()
+    base_url = S3_PUBLIC_URL.rstrip("/")
+    if base_url.startswith("/"):
+        base_url = f"{str(request.base_url).rstrip('/')}{base_url}"
+    elif base_url.startswith(("http://localhost", "https://localhost", "http://127.0.0.1", "https://127.0.0.1")):
+        base_url = f"{str(request.base_url).rstrip('/')}/minio_storage"
     
     try:
         # List objects
@@ -177,7 +182,7 @@ async def get_history(limit: int = 10):
             city = parts[0] if len(parts) > 0 else "Unknown"
             
             history.append({
-                "url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{key}",
+                "url": f"{base_url}/{S3_BUCKET}/{key}",
                 "filename": key,
                 "date": obj['LastModified'].isoformat(),
                 "city": city.replace("-", " ").title()
