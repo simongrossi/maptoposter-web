@@ -26,15 +26,15 @@ The project follows a cloud-native **Antigravity** architecture:
 
 ```mermaid
 graph TD
-    Client[Browser (SvelteKit)] -->|HTTP/443| Nginx[Nginx Gateway]
-    Nginx -->|/api| API[FastAPI (Dispatcher)]
-    Nginx -->|/| Frontend[Node.js (SSR)]
+    Client["Browser (SvelteKit)"] -->|HTTP/443| Nginx["Nginx Gateway"]
+    Nginx -->|/api| API["FastAPI (Dispatcher)"]
+    Nginx -->|/| Frontend["Node.js (SSR)"]
     
-    API -->|Enqueue Task| Redis[(Redis Broker)]
+    API -->|Enqueue Task| Redis[("Redis Broker")]
     Worker -->|Fetch Task| Redis
     
-    Worker[Celery Worker (Python)] -->|Fetch GeoData| OSM[OpenStreetMap API]
-    Worker -->|Upload Poster| MinIO[(MinIO / S3 Storage)]
+    Worker["Celery Worker (Python)"] -->|Fetch GeoData| OSM["OpenStreetMap API"]
+    Worker -->|Upload Poster| MinIO[("MinIO / S3 Storage")]
     
     Client -->|Poll Status| API
     API -->|Get Status| Redis
