@@ -1,96 +1,111 @@
-# MapToPoster Web 🌍🎨
+# MapPoster Web v2.0 🌍🎨
 
-Une application web moderne pour transformer n'importe quel lieu du monde en une magnifique affiche minimaliste.
+**Turn any location into a stunning minimalist wall art poster.**
 
-Basée sur les données **OpenStreetMap**, cette application permet de générer des posters haute résolution avec un style artistique épuré.
+MapPoster is a modern, microservices-based web application that generates high-resolution map posters using OpenStreetMap data. It features a rich SvelteKit frontend and a robust Python/FastAPI backend powered by Celery execution.
 
-![Aperçu de l'application](static/preview.png)
-
-## ✨ Fonctionnalités
-
-- **Recherche Internationale** : Trouvez n'importe quelle ville ou village.
-- **Aperçu WYSIWYG** : Sélectionnez votre zone avec une **fenêtre rectangulaire** simulant l'impression finale (format 3:4).
-- **Styles Artistiques** : Choisissez parmi des thèmes prédéfinis (*Noir, Blueprint, Sunset, etc.*).
-- **Personnalisation Complète** : Modifiez les couleurs (routes, eau, parcs, texte) pour créer votre propre style.
-- **Micro-Services** : Architecture robuste séparant le **Frontend** (SvelteKit) du **Moteur de Rendu** (Python FastAPI).
-- **Haute Résolution** : Exportez vos créations en PNG haute qualité pour l'impression.
+![Preview](static/preview.png)
 
 ---
 
-## 🚀 Comment lancer le projet ?
+## ✨ Features
 
-Le projet utilise **Docker Compose** pour orchestrer l'ensemble de l'infrastructure. C'est la méthode recommandée.
+- **Global Search**: Find any city, village, or landmark worldwide.
+- **WYSIWYG Preview**: Interactive map with real-time vector tile preview matching your theme (Dark/Light).
+- **Artistic Themes**: Pre-defined styles (Noir, Minimal, Blueprint, Sunset) + **Custom Colors** dashboard.
+- **High Resolution**: Exports print-ready PNG, SVG, or PDF files.
+- **Custom Layers**: Toggle extra details (Cycle paths, Subways, Railways, Rivers).
+- **Mobile Friendly**: Fully responsive design with drawer controls on mobile.
+- **Microservices Architecture**: Industrial-grade setup with Redis, Celery, and S3 storage.
 
-### Prérequis
+---
 
-- [Docker](https://www.docker.com/products/docker-desktop/) installé sur votre machine.
+## 🏗️ Architecture
 
-### Démarrage rapide
+The project follows a cloud-native **Antigravity** architecture:
 
-1. **Cloner le projet**
+```mermaid
+graph TD
+    Client[Browser (SvelteKit)] -->|HTTP/443| Nginx[Nginx Gateway]
+    Nginx -->|/api| API[FastAPI (Dispatcher)]
+    Nginx -->|/| Frontend[Node.js (SSR)]
+    
+    API -->|Enqueue Task| Redis[(Redis Broker)]
+    Worker -->|Fetch Task| Redis
+    
+    Worker[Celery Worker (Python)] -->|Fetch GeoData| OSM[OpenStreetMap API]
+    Worker -->|Upload Poster| MinIO[(MinIO / S3 Storage)]
+    
+    Client -->|Poll Status| API
+    API -->|Get Status| Redis
+    Client -->|Download| MinIO
+```
+
+- **Frontend**: SvelteKit + TypeScript. Mobile-first, component-based.
+- **API**: FastAPI (Python 3.11). Lightweight dispatcher.
+- **Worker**: Celery + OSMnx + Matplotlib. Stateless, heavy-lifting.
+- **Storage**: MinIO (S3 compatible). Cloud-native file handling.
+- **Queue**: Redis.
+- **Gateway**: Nginx. Handles security headers, routing, and caching.
+
+---
+
+## 🚀 Getting Started
+
+The only requirement is **Docker** and **Docker Compose**.
+
+### Quick Start
+
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/votre-user/maptoposter-web.git
+   git clone https://github.com/your-username/maptoposter-web.git
    cd maptoposter-web
    ```
 
-2. **Lancer les services**
-   Dans le dossier racine, exécutez :
+2. **Launch the stack**
    ```bash
    docker-compose up --build
    ```
-   *La première fois, cela peut prendre quelques minutes pour construire les images et installer les dépendances Python (GeoPandas, Matplotlib, etc.).*
+   *Wait a few minutes for the initial build and Python dependency installation.*
 
-3. **Accéder à l'application**
-   - Ouvrez votre navigateur sur : **[http://localhost:3000](http://localhost:3000)**
+3. **Access the App**
+   - Application: **[http://localhost](http://localhost)**
+   - MinIO Console: [http://localhost:9001](http://localhost:9001) (User: `minioadmin` / Pass: `minioadminpassword`)
 
-### Développement Local (Sans Docker)
+---
 
-Si vous préférez lancer les services séparément :
+## 🧪 Testing & Quality
 
-**1. Backend (Python)**
+To run the test suite locally:
+
+**Backend Tests**
 ```bash
-cd backend
-# Créer un environnement virtuel (optionnel mais recommandé)
-python -m venv venv
-source venv/bin/activate  # ou venv\Scripts\activate sur Windows
-pip install -r ../requirements.txt
-
-# Lancer le serveur API
-uvicorn main:app --reload --port 8000
+# Requires python + pip installed locally
+pip install -r requirements.txt
+pytest
 ```
 
-**2. Frontend (Node.js)**
+**Frontend Tests**
 ```bash
-# Dans un nouveau terminal, à la racine
 npm install
-npm run dev
-# L'app sera accessible sur http://localhost:5173
+npm run test:unit  # Vitest
+npx playwright test # E2E
 ```
-*Note : Assurez-vous que le frontend pointe vers la bonne URL API (via variables d'environnement).*
 
 ---
 
-## 🛠️ Architecture Technique
+## 🛡️ Security & Performance
 
-Le projet est découpé en deux services principaux :
-
-1.  **Backend (`/backend`)** :
-    *   **FastAPI** : API REST performante.
-    *   **OSMnx & GeoPandas** : Téléchargement et traitement des données géographiques.
-    *   **AsyncIO** : Téléchargement parallèle des couches (Routes, Eau, Parcs).
-    *   **Matplotlib (OO)** : Moteur de rendu graphique thread-safe.
-
-2.  **Frontend (`/src`)** :
-    *   **SvelteKit** : Framework fullstack pour une UI réactive.
-    *   **Leaflet** : Carte interactive pour la sélection de zone.
-    *   **Server-Side Events (SSE)** : Streaming de la progression en temps réel.
+- **Rate Limiting**: API is protected (5 requests/min per IP) to prevent abuse.
+- **Caching**: 
+  - **Result Cache**: Identical requests (same city + style + options) return instantly via S3 hash verification.
+  - **Tile Cache**: Frontend caching via standard browser mechanisms.
+- **Observability**: **Sentry** integration ready (provide `SENTRY_DSN` in env).
 
 ---
 
-## 📜 Crédits & Licence
+## 📜 License
 
-Ce projet est une évolution web moderne inspirée du script original [maptoposter Python](https://github.com/originalankur/maptoposter).
-
-- **Données** : © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL).
-- **Core Library** : [OSMnx](https://github.com/gboeing/osmnx) par Geoff Boeing.
-- **Licence** : Ce projet est sous licence **MIT**. Vous êtes libre de le modifier et de le redistribuer.
+MIT License.
+Data © OpenStreetMap contributors.
+Map tiles © CartoDB & OpenStreetMap.
