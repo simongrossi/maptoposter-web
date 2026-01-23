@@ -202,13 +202,13 @@
         const payload: GenerationRequest = {
             city,
             country,
-            name: name || undefined,
-            countryLabel: countryLabel || undefined,
+            name_label: name || undefined,
+            country_label: countryLabel || undefined,
             distance,
-            theme: !allThemes ? selectedTheme : undefined,
-            allThemes: allThemes,
-            customLayers: customLayers, // Send custom layers
-            customColors: customColorsEnabled ? customColors : undefined,
+            style: !allThemes ? selectedTheme : undefined,
+            all_themes: allThemes,
+            custom_layers: customLayers, // Send custom layers
+            custom_colors: customColorsEnabled ? customColors : undefined,
 
             format: exportFormat,
             dpi,

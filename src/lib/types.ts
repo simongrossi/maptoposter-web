@@ -22,12 +22,12 @@ export interface GenerationRequest {
     country: string;
     distance: number;
     format?: string;
-    name?: string;
-    countryLabel?: string;
-    theme?: string;
-    allThemes?: boolean;
-    customLayers?: CustomLayer[];
-    customColors?: {
+    name_label?: string;
+    country_label?: string;
+    style?: string;
+    all_themes?: boolean;
+    custom_layers?: CustomLayer[];
+    custom_colors?: {
         bg?: string;
         water?: string;
         parks?: string;
@@ -37,7 +37,7 @@ export interface GenerationRequest {
     dpi?: number;
     margins?: number;
     paper_size?: string;
-    width?: number; // Ensure width/height are part of request
+    width?: number;
     height?: number;
 }
 

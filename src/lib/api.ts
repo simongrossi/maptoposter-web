@@ -75,11 +75,17 @@ export async function generatePoster(
         }
 
         // 2. Poll Status
+        let pollDelayMs = 1000;
+        const maxPollDelayMs = 5000;
+        let lastProgress = -1;
+        let lastStatus = "";
+
         while (true) {
             // Check abort signal
             if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
 
-            await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+            const jitterMs = Math.floor(Math.random() * 200);
+            await new Promise(r => setTimeout(r, pollDelayMs + jitterMs));
 
             const statusRes = await fetch(`/api/tasks/${task_id}`, { signal });
             if (!statusRes.ok) continue; // Retry polling on glitch? or fail? Let's continue.
@@ -89,6 +95,14 @@ export async function generatePoster(
             if (task.status === 'PROGRESS' || task.status === 'PENDING') {
                 if (onProgress && task.progress) {
                     onProgress(task.progress.current || 0, task.progress.status || "Traitement...");
+                }
+                const progressValue = task.progress?.current ?? 0;
+                if (task.status !== lastStatus || progressValue > lastProgress) {
+                    pollDelayMs = 1000;
+                    lastStatus = task.status;
+                    lastProgress = progressValue;
+                } else {
+                    pollDelayMs = Math.min(maxPollDelayMs, Math.round(pollDelayMs * 1.4));
                 }
             } else if (task.status === 'SUCCESS') {
                 // Success!

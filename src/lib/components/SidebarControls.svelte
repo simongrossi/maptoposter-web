@@ -38,7 +38,10 @@
         custom: "Personnalisé",
     };
 
-    $: activePaperSize = PAPER_SIZES[paperSize] || { w: width, h: height };
+    $: activePaperSize = (PAPER_SIZES as any)[paperSize] || {
+        w: width,
+        h: height,
+    };
     $: paperRatio =
         activePaperSize && activePaperSize.h
             ? (activePaperSize.w / activePaperSize.h).toFixed(2)
@@ -123,7 +126,6 @@
         customLayers = p.data.customLayers || [];
         customColorsEnabled = p.data.customColorsEnabled;
         if (p.data.customColors) customColors = { ...p.data.customColors };
-        if (p.data.customColors) customColors = { ...p.data.customColors };
         exportFormat = p.data.exportFormat;
         // Backwards compat
         dpi = p.data.dpi || 300;
@@ -146,14 +148,17 @@
 <div class="controls-content">
     <!-- Presets Section -->
     <div class="section">
-        <h3
-            on:click={() => (showPresets = !showPresets)}
-            style="cursor: pointer;"
-        >
-            <span class="icon">⭐</span> Favoris
-            <span class="hint" style="margin-left: auto;"
-                >{showPresets ? "▼" : "▶"}</span
+        <h3>
+            <button
+                type="button"
+                class="header-btn"
+                on:click={() => (showPresets = !showPresets)}
             >
+                <span class="icon">⭐</span> Favoris
+                <span class="hint" style="margin-left: auto;"
+                    >{showPresets ? "▼" : "▶"}</span
+                >
+            </button>
         </h3>
         {#if showPresets}
             <div class="presets-container">
@@ -177,10 +182,11 @@
                     <div class="presets-list">
                         {#each presets as p}
                             <div class="preset-item">
-                                <span
+                                <button
+                                    type="button"
                                     class="preset-name"
                                     on:click={() => loadPreset(p)}
-                                    title="Charger">{p.name}</span
+                                    title="Charger">{p.name}</button
                                 >
                                 <button
                                     class="btn-icon delete"
@@ -846,6 +852,12 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+        text-align: left;
     }
     .preset-name:hover {
         color: #4dabf7;
@@ -864,5 +876,22 @@
         font-size: 0.8rem;
         color: #909296;
         font-style: italic;
+    }
+    .header-btn {
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        text-transform: inherit;
+        letter-spacing: inherit;
+    }
+    .header-btn:focus {
+        outline: none;
     }
 </style>
