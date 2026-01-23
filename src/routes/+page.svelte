@@ -237,10 +237,10 @@
                     {errorMsg}
                 </div>
             {/if}
-        </form>
 
-        <!-- Preview List -->
-        <PosterPreview files={generatedFiles} />
+            <!-- Preview List (Inside Scrollable Area) -->
+            <PosterPreview files={generatedFiles} />
+        </form>
 
         <footer class="sidebar-footer">
             <a href="/about">

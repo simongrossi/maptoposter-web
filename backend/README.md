@@ -8,7 +8,7 @@ Le backend est divisé en deux processus distincts qui partagent le même code s
 
 | Fichier | Responsabilité |
 |---------|----------------|
-| `main.py` | Point d'entrée FastAPI. Routes `/generate`, `/tasks`, `/themes`. Gère le Rate Limiting et Sentry. |
+| `main.py` | Point d'entrée FastAPI. Routes `/generate`, `/tasks`, `/themes` et `/geocode` (Proxy). Gère le Rate Limiting et Sentry. |
 | `tasks.py` | Point d'entrée Celery. Contient la logique principale `generate_poster_task`. Gère le cache S3 et l'Upload. |
 | `celery_app.py` | Configuration de la connexion Redis et Sentry pour le worker. |
 | `fetcher.py` | **AsyncIO**. Utilise `osmnx` pour télécharger les graphes et géometries en parallèle. |
