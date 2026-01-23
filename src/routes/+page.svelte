@@ -256,6 +256,7 @@
         <MapSelector
             bind:this={mapComponent}
             {distance}
+            themeId={selectedTheme}
             on:locationSelect={handleLocationSelect}
         />
         <div class="map-overlay">

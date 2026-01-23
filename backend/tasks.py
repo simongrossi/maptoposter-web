@@ -1,12 +1,13 @@
 import hashlib
 import json
-import glob
 import time
-from typing import Dict, Any, Optional
-from pathlib import Path
-from datetime import datetime, timedelta
+import os
+import boto3
+from typing import Dict, Any
+from datetime import datetime
 import asyncio
 import unicodedata
+from io import BytesIO
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backends.backend_svg import FigureCanvasSVG
@@ -15,51 +16,37 @@ import matplotlib.pyplot as plt
 
 from backend.celery_app import celery_app
 from backend.models import PosterRequest
-from backend.utils import get_coordinates, load_theme, load_fonts
+from backend.utils import get_coordinates, load_theme
 from backend.fetcher import MapDataFetcher
 from backend.renderer import MapRenderer
 
-POSTERS_DIR = Path("static/posters")
-POSTERS_DIR.mkdir(parents=True, exist_ok=True)
+# S3 Configuration
+S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "http://minio:9000")
+S3_BUCKET = os.getenv("S3_BUCKET", "posters")
+S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000")
+AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "minioadmin")
+AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY", "minioadminpassword")
 
-def cleanup_old_posters(max_age_hours=24):
-    """Delete posters older than max_age_hours."""
-    try:
-        cutoff = time.time() - (max_age_hours * 3600)
-        for f in POSTERS_DIR.glob("*"):
-            if f.is_file() and f.stat().st_mtime < cutoff:
-                f.unlink()
-    except Exception as e:
-        print(f"Cleanup error: {e}")
+def get_s3_client():
+    return boto3.client(
+        's3',
+        endpoint_url=S3_ENDPOINT,
+        aws_access_key_id=AWS_KEY,
+        aws_secret_access_key=AWS_SECRET
+    )
 
 @celery_app.task(bind=True)
 def generate_poster_task(self, request_data: Dict[str, Any]):
     """
-    Celery task to generate a map poster.
+    Celery task to generate a map poster (Stateless/S3).
     """
     try:
-        # 1. Cleanup old files first (simple periodic maintenance)
-        # Running it here avoids needing a separate beat scheduler for now.
-        if datetime.now().minute % 30 == 0: # Run roughly every 30 mins logic if many tasks
-             cleanup_old_posters()
-        else:
-             # Or just run it always? It is fast on small folders.
-             cleanup_old_posters()
-
         request = PosterRequest(**request_data)
         
-        # 2. Check Cache (Hash-based)
-        # We need to resolve lat/lon FIRST to include them in hash? 
-        # Or hash the request parameters (city, country, style, layers...) ?
-        # City/Country strings map to lat/lon. If OSM result changes, it's ok to regenerate eventually, 
-        # but for caching SAME request, we stick to inputs.
-        
-        # Generate stable hash
+        # 1. Check Cache (S3)
         req_dump = request.model_dump_json()
         req_hash = hashlib.md5(req_dump.encode('utf-8')).hexdigest()
         
-        # Filename format: {sanitized_city}_{style}_{hash}.{ext}
-        # Sanitize city
         def slugify(value):
             value = str(value)
             value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
@@ -68,29 +55,30 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
             
         safe_city = slugify(request.city)
         filename = f"{safe_city}_{request.style}_{req_hash[:8]}.{request.format.lower()}"
-        output_path = POSTERS_DIR / filename
+        file_key = f"{filename}" # Key in bucket
         
-        if output_path.exists():
-            # CACHE HIT!
-            self.update_state(state='SUCCESS', meta={'current': 100, 'total': 100, 'status': 'Restored from cache'})
+        s3 = get_s3_client()
+        
+        try:
+            s3.head_object(Bucket=S3_BUCKET, Key=file_key)
+            # CACHE HIT
+            self.update_state(state='SUCCESS', meta={'current': 100, 'total': 100, 'status': 'Restored from S3 cache'})
             return {
                 "success": True, 
-                "file_url": f"/posters/{filename}", 
-                "file_path": str(output_path),
+                "file_url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{filename}", 
                 "cached": True
             }
+        except:
+            # Not found, proceed
+            pass
 
-        # CACHE MISS - Proceed to generation
         self.update_state(state='PROGRESS', meta={'current': 10, 'total': 100, 'status': 'Decoding parameters...'})
 
+        # Async Logic Wrapper
         async def _async_logic():
-            # 1. Resolve
             lat, lon = await get_coordinates(request.city, request.country)
-            
-            # 2. Config & Theme
             theme = load_theme(request.style)
              
-            # Apply color overrides
             if request.custom_colors:
                 cc = request.custom_colors
                 if cc.bg: theme['bg'] = cc.bg
@@ -102,7 +90,6 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
                         if k.startswith('road_'):
                             theme[k] = cc.roads
 
-            # 3. Fetch Data
             aspect = request.width / request.height
             max_dim = max(request.width, request.height)
             min_dim = min(request.width, request.height)
@@ -114,7 +101,6 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
 
         self.update_state(state='PROGRESS', meta={'current': 20, 'total': 100, 'status': 'Fetching map data...'})
         
-        # Run async part
         try:
              lat, lon, theme, data = asyncio.run(_async_logic())
         except Exception:
@@ -142,9 +128,9 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
             }
         )
 
-        self.update_state(state='PROGRESS', meta={'current': 90, 'total': 100, 'status': 'Saving file...'})
+        self.update_state(state='PROGRESS', meta={'current': 90, 'total': 100, 'status': 'Uploading to cloud...'})
 
-        # 5. Save
+        # 5. Save to Buffer & Upload
         fmt = request.format.lower()
         if fmt == 'svg':
             canvas = FigureCanvasSVG(fig)
@@ -153,15 +139,27 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
         else:
             canvas = FigureCanvasAgg(fig)
         
-        canvas.print_figure(str(output_path), dpi=300, bbox_inches='tight', pad_inches=0.05, facecolor=theme['bg'])
+        buf = BytesIO()
+        canvas.print_figure(buf, format=fmt, dpi=300, bbox_inches='tight', pad_inches=0.05, facecolor=theme['bg'])
+        buf.seek(0)
         
-        # Cleanup Memory
+        # Upload
+        content_type = f"image/{fmt}" if fmt != 'svg' else 'image/svg+xml'
+        if fmt == 'pdf': content_type = 'application/pdf'
+        
+        s3.upload_fileobj(
+            buf, 
+            S3_BUCKET, 
+            file_key,
+            ExtraArgs={'ContentType': content_type}
+        )
+        
         plt.close(fig)
+        buf.close()
 
         return {
             "success": True, 
-            "file_url": f"/posters/{filename}", 
-            "file_path": str(output_path),
+            "file_url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{filename}", 
             "cached": False
         }
 

@@ -5,12 +5,14 @@
 
     export let initialDefaults = { lat: 48.8566, lng: 2.3522 }; // Paris default
     export let distance: number = 10000;
+    export let themeId: string = "standard";
 
     const dispatch = createEventDispatcher();
     let mapElement: HTMLElement;
 
     // Leaflet instances with types
     let map: L.Map;
+    let tileLayer: L.TileLayer; // Track layer to swap it
     let previewRect: L.Rectangle;
     let marker: L.Marker;
     let leaflet: typeof L; // Runtime library
@@ -18,28 +20,74 @@
     // Poster config mirroring backend default (12x16 inch = 0.75 aspect)
     const ASPECT_RATIO = 12 / 16;
 
+    const TILE_PROVIDERS: Record<string, string> = {
+        noir: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        sombre: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        minimal:
+            "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        standard: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    };
+
+    // Attributions
+    const ATTRS: Record<string, string> = {
+        standard: "&copy; OpenStreetMap contributors",
+        other: "&copy; OpenStreetMap &copy; CARTO",
+    };
+
     onMount(async () => {
         if (browser) {
-            // Dynamic import for SSR compatibility
             const module = await import("leaflet");
-            leaflet = module.default; // use default export or module depending on setup
-            // Note: sometimes module IS 'L', sometimes module.default. Vite/SvelteKit behavior.
-            // Usually module.default is safe for ESM.
-
+            leaflet = module.default || module;
             await import("leaflet/dist/leaflet.css");
-
             initMap();
         }
     });
 
+    // Watch distance
     $: if (map && distance && previewRect && marker) {
         updatePreviewRectangle(marker.getLatLng());
+    }
+
+    // Watch Theme
+    $: if (map && themeId && leaflet) {
+        updateTileLayer();
+    }
+
+    function updateTileLayer() {
+        if (!map || !leaflet) return;
+
+        // Pick provider
+        let url = TILE_PROVIDERS["standard"];
+        let attr = ATTRS["standard"];
+
+        if (themeId && (themeId.includes("noir") || themeId.includes("dark"))) {
+            url = TILE_PROVIDERS["noir"];
+            attr = ATTRS["other"];
+        } else if (
+            themeId &&
+            (themeId.includes("white") ||
+                themeId.includes("light") ||
+                themeId.includes("minimal"))
+        ) {
+            url = TILE_PROVIDERS["minimal"];
+            attr = ATTRS["other"];
+        }
+
+        if (tileLayer) {
+            map.removeLayer(tileLayer);
+        }
+
+        tileLayer = leaflet.tileLayer(url, { attribution: attr }).addTo(map);
+
+        // Ensure markers/rects stay on top? TileLayers usually go on background (z-index 1).
+        // If needed: tileLayer.bringToBack();
+        tileLayer.bringToBack();
     }
 
     function initMap() {
         if (!mapElement) return;
 
-        // Fix 404 on marker icons by resetting default icon options
+        // Fix 404 on marker icons
         // @ts-ignore
         delete leaflet.Icon.Default.prototype._getIconUrl;
         leaflet.Icon.Default.mergeOptions({
@@ -56,13 +104,8 @@
             .map(mapElement)
             .setView([initialDefaults.lat, initialDefaults.lng], 10);
 
-        // Tile layer (OSM)
-        leaflet
-            .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution:
-                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            })
-            .addTo(map);
+        // Init Tile Layer
+        updateTileLayer();
 
         // Marker (draggable center)
         marker = leaflet

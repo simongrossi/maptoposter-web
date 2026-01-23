@@ -6,7 +6,27 @@ from typing import Dict, Any
 from backend.models import PosterRequest
 from backend.tasks import generate_poster_task
 
+import os
+import sentry_sdk
+from fastapi import Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+# Sentry Init
+if os.getenv("SENTRY_DSN"):
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
+
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="MapPoster Generator API (Async)")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -18,13 +38,14 @@ app.add_middleware(
 )
 
 @app.post("/generate")
-async def generate_poster_endpoint(request: PosterRequest):
+@limiter.limit("5/minute")
+async def generate_poster_endpoint(request: Request, body: PosterRequest):
     """
     Enqueue a poster generation task.
     Returns: {"task_id": "..."}
     """
     # Convert model to dict for Celery
-    task = generate_poster_task.delay(request.model_dump())
+    task = generate_poster_task.delay(body.model_dump())
     return {"task_id": task.id}
 
 @app.get("/themes")

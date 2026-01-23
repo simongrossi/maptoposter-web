@@ -19,6 +19,28 @@ services:
     ports:
       - "6379:6379"
 
+  # 3. Object Storage (S3)
+  minio:
+    image: minio/minio
+    container_name: maptoposter-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadminpassword"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  # Auto-create bucket
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c " /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadminpassword; /usr/bin/mc mb myminio/posters; /usr/bin/mc policy set public myminio/posters; exit 0; "
+
   # 3. Task Worker (Heavy Lifting)
   worker:
     build:
@@ -32,8 +54,14 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONUNBUFFERED=1
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadminpassword
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_BUCKET=posters
+      - S3_PUBLIC_URL=http://localhost:9000
     depends_on:
       - redis
+      - minio
 
   # 4. API (Dispatcher)
   api:
@@ -76,3 +104,4 @@ services:
 volumes:
   osm_cache:
   posters_volume:
+  minio_data:
