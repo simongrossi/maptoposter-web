@@ -154,7 +154,7 @@ async def get_history(limit: int = 10):
     """
     List recent generated posters from S3.
     """
-    from backend.tasks import get_s3_client, S3_BUCKET, S3_PUBLIC_URL
+    from backend.tasks import get_s3_client, build_public_url
     s3 = get_s3_client()
     
     try:
@@ -177,7 +177,7 @@ async def get_history(limit: int = 10):
             city = parts[0] if len(parts) > 0 else "Unknown"
             
             history.append({
-                "url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{key}",
+                "url": build_public_url(key),
                 "filename": key,
                 "date": obj['LastModified'].isoformat(),
                 "city": city.replace("-", " ").title()

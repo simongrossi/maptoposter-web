@@ -23,7 +23,7 @@ from backend.renderer import MapRenderer
 # S3 Configuration
 S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "http://minio:9000")
 S3_BUCKET = os.getenv("S3_BUCKET", "posters")
-S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000")
+S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "/minio_storage")
 AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "minioadmin")
 AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY", "minioadminpassword")
 
@@ -34,6 +34,10 @@ def get_s3_client():
         aws_access_key_id=AWS_KEY,
         aws_secret_access_key=AWS_SECRET
     )
+
+def build_public_url(object_key: str) -> str:
+    base = S3_PUBLIC_URL.rstrip("/")
+    return f"{base}/{S3_BUCKET}/{object_key}"
 
 @celery_app.task(bind=True)
 def generate_poster_task(self, request_data: Dict[str, Any]):
@@ -70,7 +74,7 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
             self.update_state(state='SUCCESS', meta={'current': 100, 'total': 100, 'status': 'Restored from S3 cache'})
             return {
                 "success": True, 
-                "file_url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{filename}", 
+                "file_url": build_public_url(filename),
                 "cached": True
             }
         except:
@@ -164,7 +168,7 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
             
             return {
                 "success": True, 
-                "file_url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{zip_filename}", 
+                "file_url": build_public_url(zip_filename),
                 "cached": False
             }
 
@@ -259,7 +263,7 @@ def generate_poster_task(self, request_data: Dict[str, Any]):
     
             return {
                 "success": True, 
-                "file_url": f"{S3_PUBLIC_URL}/{S3_BUCKET}/{filename}", 
+                "file_url": build_public_url(filename),
                 "cached": False
             }
 

@@ -63,7 +63,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=minioadminpassword
       - S3_ENDPOINT_URL=http://minio:9000
       - S3_BUCKET=posters
-      - S3_PUBLIC_URL=http://localhost/minio_storage
+      - S3_PUBLIC_URL=${PUBLIC_URL:-http://localhost}/minio_storage
     depends_on:
       - redis
       - minio
@@ -78,6 +78,7 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONUNBUFFERED=1
+      - S3_PUBLIC_URL=${PUBLIC_URL:-http://localhost}/minio_storage
     depends_on:
       - redis
 
