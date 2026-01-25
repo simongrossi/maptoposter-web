@@ -75,7 +75,6 @@
     // Presets Logic
     let presets: Preset[] = [];
     let newPresetName = "";
-    let showPresets = false;
 
     onMount(() => {
         loadPresets();
@@ -147,63 +146,54 @@
 
 <div class="controls-content">
     <!-- Presets Section -->
-    <div class="section">
-        <h3>
-            <button
-                type="button"
-                class="header-btn"
-                on:click={() => (showPresets = !showPresets)}
-            >
-                <span class="icon">⭐</span> Favoris
-                <span class="hint" style="margin-left: auto;"
-                    >{showPresets ? "▼" : "▶"}</span
+    <details class="section">
+        <summary class="section-summary">
+            <span class="icon">⭐</span> Favoris
+        </summary>
+        <div class="presets-container">
+            <div class="form-group row">
+                <input
+                    type="text"
+                    bind:value={newPresetName}
+                    placeholder="Nom du favori..."
+                    style="flex:1"
+                />
+                <button
+                    type="button"
+                    class="btn-small"
+                    on:click={saveCurrentAsPreset}
+                    disabled={!newPresetName.trim()}>💾</button
                 >
-            </button>
-        </h3>
-        {#if showPresets}
-            <div class="presets-container">
-                <div class="form-group row">
-                    <input
-                        type="text"
-                        bind:value={newPresetName}
-                        placeholder="Nom du favori..."
-                        style="flex:1"
-                    />
-                    <button
-                        type="button"
-                        class="btn-small"
-                        on:click={saveCurrentAsPreset}
-                        disabled={!newPresetName.trim()}>💾</button
-                    >
-                </div>
-                {#if presets.length === 0}
-                    <div class="empty-msg">Aucun favori enregistré.</div>
-                {:else}
-                    <div class="presets-list">
-                        {#each presets as p}
-                            <div class="preset-item">
-                                <button
-                                    type="button"
-                                    class="preset-name"
-                                    on:click={() => loadPreset(p)}
-                                    title="Charger">{p.name}</button
-                                >
-                                <button
-                                    class="btn-icon delete"
-                                    on:click|stopPropagation={() =>
-                                        removePreset(p.id)}>🗑️</button
-                                >
-                            </div>
-                        {/each}
-                    </div>
-                {/if}
             </div>
-        {/if}
-    </div>
+            {#if presets.length === 0}
+                <div class="empty-msg">Aucun favori enregistré.</div>
+            {:else}
+                <div class="presets-list">
+                    {#each presets as p}
+                        <div class="preset-item">
+                            <button
+                                type="button"
+                                class="preset-name"
+                                on:click={() => loadPreset(p)}
+                                title="Charger">{p.name}</button
+                            >
+                            <button
+                                class="btn-icon delete"
+                                on:click|stopPropagation={() =>
+                                    removePreset(p.id)}>🗑️</button
+                            >
+                        </div>
+                    {/each}
+                </div>
+            {/if}
+        </div>
+    </details>
 
     <!-- Location Section -->
-    <div class="section">
-        <h3><span class="icon">📍</span> Lieu</h3>
+    <details class="section" open>
+        <summary class="section-summary">
+            <span class="icon">📍</span> Lieu
+        </summary>
         <div class="form-group">
             <label for="city-input">Ville</label>
             <input
@@ -233,11 +223,13 @@
                 <span class="error-msg">Veuillez entrer un pays</span>
             {/if}
         </div>
-    </div>
+    </details>
 
     <!-- Labels Section -->
-    <div class="section">
-        <h3><span class="icon">🏷️</span> Textes</h3>
+    <details class="section" open>
+        <summary class="section-summary">
+            <span class="icon">🏷️</span> Textes
+        </summary>
         <div class="grid-2">
             <div class="form-group">
                 <label for="city-label">Titre (Ville)</label>
@@ -258,14 +250,14 @@
                 />
             </div>
         </div>
-    </div>
+    </details>
 
     <!-- Zoom/Distance -->
-    <div class="section">
-        <h3>
+    <details class="section" open>
+        <summary class="section-summary">
             <span class="icon">📏</span> Distance
             <span class="hint">({distance / 1000} km)</span>
-        </h3>
+        </summary>
         <div class="form-group">
             <input
                 type="range"
@@ -282,11 +274,13 @@
                 >
             {/if}
         </div>
-    </div>
+    </details>
 
     <!-- Style Section -->
-    <div class="section">
-        <h3><span class="icon">🎨</span> Style</h3>
+    <details class="section" open>
+        <summary class="section-summary">
+            <span class="icon">🎨</span> Style
+        </summary>
         <div class="form-group">
             <label for="theme-select">Thème</label>
             {#if themes.length === 0}
@@ -314,11 +308,13 @@
                 <span class="label-text">Générer tous les thèmes</span>
             </label>
         </div>
-    </div>
+    </details>
 
     <!-- Custom Colors Toggle -->
-    <div class="section">
-        <h3><span class="icon">✏️</span> Personnalisation</h3>
+    <details class="section">
+        <summary class="section-summary">
+            <span class="icon">✏️</span> Personnalisation
+        </summary>
         <div class="form-group checkbox-group">
             <label class="toggle">
                 <input type="checkbox" bind:checked={customColorsEnabled} />
@@ -376,11 +372,13 @@
                 </div>
             </div>
         {/if}
-    </div>
+    </details>
 
     <!-- Additional Layers -->
-    <div class="section">
-        <h3><span class="icon">🛤️</span> Couches Sup.</h3>
+    <details class="section">
+        <summary class="section-summary">
+            <span class="icon">🛤️</span> Couches Sup.
+        </summary>
 
         {#each customLayers as layer}
             <div class="layer-control">
@@ -418,11 +416,13 @@
                 {/if}
             </div>
         {/each}
-    </div>
+    </details>
 
     <!-- Print Settings (New) -->
-    <div class="section">
-        <h3><span class="icon">🖨️</span> Impression</h3>
+    <details class="section">
+        <summary class="section-summary">
+            <span class="icon">🖨️</span> Impression
+        </summary>
         <div class="form-group">
             <label for="paper-select">Format Papier</label>
             <select
@@ -504,11 +504,13 @@
                 />
             </div>
         </div>
-    </div>
+    </details>
 
     <!-- Export -->
-    <div class="section">
-        <h3><span class="icon">💾</span> Export</h3>
+    <details class="section">
+        <summary class="section-summary">
+            <span class="icon">💾</span> Export
+        </summary>
         <div class="form-group">
             <span class="label">Format de fichier</span>
             <div class="format-idx">
@@ -526,7 +528,7 @@
                 {/each}
             </div>
         </div>
-    </div>
+    </details>
 </div>
 
 <style>
@@ -534,7 +536,7 @@
     .section {
         margin-bottom: 28px;
     }
-    h3 {
+    .section-summary {
         font-size: 0.9rem;
         text-transform: uppercase;
         letter-spacing: 1px;
@@ -545,6 +547,22 @@
         gap: 8px;
         border-bottom: 1px solid #373a40;
         padding-bottom: 8px;
+        cursor: pointer;
+        list-style: none;
+    }
+    .section-summary::-webkit-details-marker {
+        display: none;
+    }
+    .section-summary::marker {
+        content: "";
+    }
+    details.section[open] > .section-summary {
+        color: #c1c2c5;
+        border-bottom-color: #4dabf7;
+    }
+    details.section:not([open]) > .section-summary {
+        margin-bottom: 0;
+        border-bottom: none;
     }
     .icon {
         font-size: 1.1rem;
@@ -877,21 +895,14 @@
         color: #909296;
         font-style: italic;
     }
-    .header-btn {
-        background: none;
-        border: none;
-        padding: 0;
-        margin: 0;
-        font: inherit;
-        color: inherit;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        width: 100%;
-        text-transform: inherit;
-        letter-spacing: inherit;
+    details.section {
+        padding-bottom: 12px;
+        border-bottom: 1px solid #2c2e33;
     }
-    .header-btn:focus {
-        outline: none;
+    details.section:last-child {
+        border-bottom: none;
+    }
+    details.section > :not(summary) {
+        margin-top: 12px;
     }
 </style>
