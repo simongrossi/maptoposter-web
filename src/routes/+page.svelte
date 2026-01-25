@@ -380,14 +380,13 @@
             sans-serif;
         background: #1a1b1e;
         color: #e0e0e0;
-        height: 100vh;
-        overflow: hidden;
     }
 
     .app-container {
         display: flex;
         height: 100vh;
         width: 100vw;
+        overflow: hidden;
     }
 
     /* Sidebar Styles */
