@@ -16,15 +16,22 @@ export const availableRankingItems: RankingItem[] = [
 
 export const rankingStorageKey = 'ranking-builder-items';
 
-export function insertAtPosition(items: RankingItem[], item: RankingItem, requestedPosition?: number) {
-  const next = items.filter((entry) => entry.id !== item.id);
+export function normalizeRequestedPosition(value?: number | null) {
+  if (value === undefined || value === null || Number.isNaN(value)) return undefined;
+  if (!Number.isFinite(value)) return undefined;
+  return Math.max(1, Math.floor(value));
+}
 
-  if (!requestedPosition || Number.isNaN(requestedPosition)) {
+export function insertAtPosition(items: RankingItem[], item: RankingItem, requestedPosition?: number | null) {
+  const next = items.filter((entry) => entry.id !== item.id);
+  const normalizedPosition = normalizeRequestedPosition(requestedPosition);
+
+  if (!normalizedPosition) {
     next.push(item);
     return next;
   }
 
-  const clampedIndex = Math.min(Math.max(0, requestedPosition - 1), next.length);
+  const clampedIndex = Math.min(normalizedPosition - 1, next.length);
   next.splice(clampedIndex, 0, item);
   return next;
 }
