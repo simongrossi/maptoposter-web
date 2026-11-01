@@ -201,4 +201,18 @@
         color: var(--text);
         font-weight: 500;
     }
+
+    @media (max-width: 768px) {
+        .actions a {
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zip-btn {
+            min-height: 44px;
+        }
+    }
 </style>

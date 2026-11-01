@@ -300,4 +300,31 @@
       grid-template-columns: 1fr;
     }
   }
+
+  @media (max-width: 640px) {
+    .filters,
+    section,
+    aside {
+      padding: 12px;
+    }
+
+    li {
+      flex-wrap: wrap;
+    }
+
+    .actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    .actions input {
+      width: 7rem;
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    button {
+      min-height: 44px;
+    }
+  }
 </style>

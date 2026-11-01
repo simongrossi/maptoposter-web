@@ -98,6 +98,8 @@
         min-height: 100vh;
         min-height: 100dvh;
         color: var(--text);
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
         background:
             radial-gradient(
                 1200px 800px at 8% -10%,
@@ -136,6 +138,15 @@
         font: inherit;
     }
 
+    :global(button),
+    :global(a) {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    :global(button) {
+        touch-action: manipulation;
+    }
+
     .app-main {
         height: 100vh;
         height: 100dvh;
@@ -153,6 +164,7 @@
         position: sticky;
         top: 0;
         z-index: 50;
+        padding-top: env(safe-area-inset-top);
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         background: rgba(10, 12, 16, 0.72);
         backdrop-filter: blur(18px);
@@ -255,11 +267,12 @@
     .site-footer {
         width: min(1120px, 100% - 48px);
         margin: 0 auto;
-        padding: 22px 0 28px;
+        padding: 22px 0 calc(28px + env(safe-area-inset-bottom));
         border-top: 1px solid rgba(255, 255, 255, 0.06);
         display: flex;
+        flex-wrap: wrap;
         justify-content: space-between;
-        gap: 16px;
+        gap: 10px 16px;
         color: var(--muted);
         font-size: 0.8rem;
     }
@@ -295,9 +308,16 @@
         }
 
         .site-header nav a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
             padding: 7px 9px;
             font-size: 0.82rem;
             white-space: nowrap;
+        }
+
+        .brand {
+            min-height: 44px;
         }
 
         .brand-name {

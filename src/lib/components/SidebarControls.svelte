@@ -1117,4 +1117,53 @@
     .empty-msg {
         color: var(--muted);
     }
+
+    /* Confort tactile : cibles >= 44 px et champs a 16 px pour eviter le
+       zoom automatique de Safari iOS au focus. */
+    @media (max-width: 768px) {
+        input[type="text"],
+        input[type="number"],
+        select {
+            min-height: 44px;
+            font-size: 16px;
+        }
+
+        .btn-search,
+        .btn-small,
+        .section-summary,
+        .toggle,
+        .preset-name,
+        .btn-icon {
+            min-height: 44px;
+        }
+
+        .btn-small,
+        .btn-icon {
+            min-width: 44px;
+        }
+
+        .radio-card {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .layer-settings {
+            margin-left: 0;
+        }
+
+        input[type="range"] {
+            height: 8px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            width: 24px;
+            height: 24px;
+        }
+
+        .color-item input[type="color"] {
+            height: 44px;
+        }
+    }
 </style>

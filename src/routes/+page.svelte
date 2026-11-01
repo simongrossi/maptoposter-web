@@ -618,6 +618,8 @@
             left: 0;
             width: 100%;
             height: 100%;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
             transform: translateX(-100%);
             transition: transform 0.3s ease-in-out;
         }
@@ -631,15 +633,6 @@
            manipule au doigt. */
         .map-overlay {
             display: none;
-        }
-
-        /* Show mobile toggles */
-        .mobile-toggle {
-            display: flex !important;
-        }
-
-        .sidebar-close {
-            display: block !important;
         }
     }
 
@@ -693,11 +686,35 @@
         position: absolute;
         top: 20px;
         right: 18px;
-        background: transparent;
-        border: none;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 50%;
         color: var(--muted);
-        font-size: 1.5rem;
+        font-size: 1.4rem;
+        line-height: 1;
         cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+        .mobile-toggle {
+            display: flex;
+            top: calc(20px + env(safe-area-inset-top));
+            left: calc(20px + env(safe-area-inset-left));
+            min-height: 44px;
+        }
+
+        .sidebar-close {
+            display: grid;
+            top: calc(20px + env(safe-area-inset-top));
+            right: calc(18px + env(safe-area-inset-right));
+        }
+
+        .sidebar-footer a {
+            min-height: 44px;
+        }
     }
 
     @media (min-width: 769px) and (max-width: 1100px) {

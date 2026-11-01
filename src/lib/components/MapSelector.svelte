@@ -493,12 +493,20 @@
 
     @media (max-width: 768px) {
         .map-tools {
-            top: 20px;
-            right: 12px;
+            top: calc(20px + env(safe-area-inset-top));
+            right: calc(12px + env(safe-area-inset-right));
+        }
+
+        .map-tool {
+            min-height: 44px;
         }
 
         .map-shell :global(.leaflet-control-zoom) {
             display: none;
+        }
+
+        .map-shell :global(.leaflet-bottom) {
+            bottom: env(safe-area-inset-bottom);
         }
     }
 

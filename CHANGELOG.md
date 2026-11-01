@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   position into the city/country fields.
 - **Documentation**: a rewritten, production-oriented README with badges,
   architecture, API overview, deployment, operations, and troubleshooting.
+- **Mobile**: `viewport-fit=cover` and safe-area insets, 16 px form fields to
+  prevent iOS focus zoom, 44 px touch targets, responsive header/navigation,
+  full-screen sidebar close control, and mobile-specific map controls.
 
 ### Fixed
 - Removed the leftover global navigation bar that displayed default blue links

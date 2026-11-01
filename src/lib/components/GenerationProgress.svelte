@@ -106,4 +106,10 @@
         background: rgba(251, 113, 133, 0.2);
         border-color: rgba(251, 113, 133, 0.45);
     }
+
+    @media (max-width: 768px) {
+        .btn-cancel {
+            min-height: 44px;
+        }
+    }
 </style>

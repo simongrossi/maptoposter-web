@@ -33,6 +33,9 @@ Le layout réagit aux breakpoints (`max-width: 768px`).
 - **Desktop** : Sidebar fixe à gauche (380px), Carte à droite (flex 1).
 - **Mobile** : Carte plein écran. Sidebar transformée en "Drawer" (Off-canvas) qui glisse via CSS transform.
   - État géré par `mobileMenuOpen` dans `+page.svelte`.
+  - Safe-areas iOS (`viewport-fit=cover`), champs à 16 px pour éviter le zoom
+    automatique de Safari, cibles tactiles de 44 px et contrôles Leaflet adaptés.
+  - Le bouton de fermeture et le bouton Paramètres sont accessibles au pouce.
 
 ## 🌍 Map Tiles Logic
 

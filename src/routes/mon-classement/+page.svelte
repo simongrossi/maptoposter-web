@@ -158,4 +158,16 @@
       grid-template-columns: 1fr;
     }
   }
+
+  @media (max-width: 640px) {
+    .filters {
+      padding: 12px;
+    }
+
+    input,
+    select {
+      min-height: 44px;
+      font-size: 16px;
+    }
+  }
 </style>
