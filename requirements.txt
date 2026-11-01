@@ -14,9 +14,6 @@ uvicorn
 pydantic
 celery[redis]
 redis
-structlog
-pytest
-pytest-mock
 httpx
 slowapi
 sentry-sdk[fastapi,celery]

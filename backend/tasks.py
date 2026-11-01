@@ -1,273 +1,367 @@
-import hashlib
-import json
-import time
-import os
-import boto3
-from typing import Dict, Any
-from datetime import datetime
+"""Tache Celery de generation des affiches.
+
+Le worker est volontairement borne :
+  - concurrence 1 et un processus enfant par tache (voir docker-compose.yml) ;
+  - plafond memoire Docker (2 Go) + recyclage Celery ;
+  - duree maximale soft/hard ;
+  - une seule tache lourde en memoire a la fois.
+"""
+
+from __future__ import annotations
+
 import asyncio
+import gc
+import hashlib
+import logging
+import time
 import unicodedata
+import zipfile
 from io import BytesIO
+from typing import Any, Dict, Optional
+
+from celery.signals import task_postrun
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.backends.backend_svg import FigureCanvasSVG
 from matplotlib.backends.backend_pdf import FigureCanvasPdf
-import matplotlib.pyplot as plt
+from matplotlib.backends.backend_svg import FigureCanvasSVG
 
+from backend import storage
 from backend.celery_app import celery_app
-from backend.models import PosterRequest
-from backend.utils import get_coordinates, load_theme
 from backend.fetcher import MapDataFetcher
+from backend.models import PosterRequest
+from backend.redis_client import get_redis
 from backend.renderer import MapRenderer
+from backend.settings import settings
+from backend.utils import get_coordinates, list_themes, load_theme, safe_slug
 
-# S3 Configuration
-S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "http://minio:9000")
-S3_BUCKET = os.getenv("S3_BUCKET", "posters")
-S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "/minio_storage")
-AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "minioadmin")
-AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY", "minioadminpassword")
+logger = logging.getLogger(__name__)
 
-def get_s3_client():
-    return boto3.client(
-        's3',
-        endpoint_url=S3_ENDPOINT,
-        aws_access_key_id=AWS_KEY,
-        aws_secret_access_key=AWS_SECRET
+_CONTENT_TYPES = {
+    "png": "image/png",
+    "svg": "image/svg+xml",
+    "pdf": "application/pdf",
+    "zip": "application/zip",
+}
+
+
+def _run_async(coro):
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+def _request_hash(request: PosterRequest) -> str:
+    return hashlib.sha256(request.model_dump_json().encode("utf-8")).hexdigest()
+
+
+def _build_file_key(request: PosterRequest, request_hash: str) -> str:
+    city = safe_slug(request.city)
+    if request.all_themes:
+        return f"{city}_ALL_THEMES_{request_hash[:12]}.zip"
+    style = safe_slug(request.style, fallback="theme")
+    return f"{city}_{style}_{request_hash[:12]}.{request.format}"
+
+
+def _record_object(session_id: Optional[str], object_key: str) -> None:
+    """Indexe l'objet pour l'historique de la session (borne et expire)."""
+    if not session_id:
+        return
+    try:
+        client = get_redis()
+        redis_key = f"session:{session_id}:objects"
+        pipe = client.pipeline()
+        pipe.zadd(redis_key, {object_key: time.time()})
+        pipe.zremrangebyrank(redis_key, 0, -51)
+        pipe.expire(redis_key, settings.session_ttl)
+        pipe.execute()
+    except Exception as exc:  # pragma: no cover - depend de Redis
+        logger.warning("Indexation de l'historique impossible: %s", exc)
+
+
+def _maybe_cleanup_storage() -> None:
+    """Nettoyage opportuniste, au plus une fois par heure."""
+    if settings.poster_retention_days <= 0 and settings.max_stored_posters <= 0:
+        return
+    try:
+        client = get_redis()
+        if not client.set("storage:cleanup:lock", "1", nx=True, ex=3600):
+            return
+    except Exception:
+        return
+
+    try:
+        storage.cleanup_old_objects(
+            settings.poster_retention_days, settings.max_stored_posters
+        )
+    except Exception as exc:  # pragma: no cover - depend du backend
+        logger.warning("Nettoyage du stockage en echec: %s", exc)
+
+
+def _canvas_for(fmt: str, figure):
+    if fmt == "svg":
+        return FigureCanvasSVG(figure)
+    if fmt == "pdf":
+        return FigureCanvasPdf(figure)
+    return FigureCanvasAgg(figure)
+
+
+def _render_to_bytes(
+    theme: Dict[str, Any],
+    data: Dict[str, Any],
+    request: PosterRequest,
+    point: tuple,
+) -> bytes:
+    renderer = MapRenderer(theme)
+    figure = renderer.render(
+        data=data,
+        city=request.city,
+        country=request.country,
+        point=point,
+        dist=request.distance,
+        width_in=request.width,
+        height_in=request.height,
+        custom_layers_config=request.custom_layers,
+        text_CONFIG={
+            "country_label": request.country_label,
+            "name_label": request.name_label,
+        },
+        margins=request.margins,
     )
 
-def build_public_url(object_key: str) -> str:
-    base = S3_PUBLIC_URL.rstrip("/")
-    return f"{base}/{S3_BUCKET}/{object_key}"
-
-@celery_app.task(bind=True)
-def generate_poster_task(self, request_data: Dict[str, Any]):
-    """
-    Celery task to generate a map poster (Stateless/S3).
-    """
+    buffer = BytesIO()
     try:
-        request = PosterRequest(**request_data)
-        
-        # 1. Check Cache (S3)
-        req_dump = request.model_dump_json()
-        req_hash = hashlib.md5(req_dump.encode('utf-8')).hexdigest()
-        
-        def slugify(value):
-            value = str(value)
-            value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-            value = value.lower().replace(" ", "_")
-            return value
-            
-        safe_city = slugify(request.city)
-        if request.all_themes:
-            # Hash includes 'ALL_THEMES' implicitly via model_dump, but file extension differs
-            filename = f"{safe_city}_ALL_THEMES_{req_hash[:8]}.zip"
-        else:
-            filename = f"{safe_city}_{request.style}_{req_hash[:8]}.{request.format.lower()}"
-        
-        file_key = filename
-        
-        s3 = get_s3_client()
-        
+        canvas = _canvas_for(request.format, figure)
+        canvas.print_figure(
+            buffer,
+            format=request.format,
+            dpi=request.dpi,
+            facecolor=theme.get("bg", "#FFFFFF"),
+        )
+        return buffer.getvalue()
+    finally:
+        buffer.close()
         try:
-            s3.head_object(Bucket=S3_BUCKET, Key=file_key)
-            # CACHE HIT
-            self.update_state(state='SUCCESS', meta={'current': 100, 'total': 100, 'status': 'Restored from S3 cache'})
-            return {
-                "success": True, 
-                "file_url": build_public_url(filename),
-                "cached": True
-            }
-        except:
-            # Not found, proceed
+            figure.clear()
+        except Exception:
             pass
+        del figure
 
+
+@celery_app.task(
+    bind=True,
+    name="backend.tasks.generate_poster_task",
+    soft_time_limit=settings.task_soft_timeout,
+    time_limit=settings.task_hard_timeout,
+)
+def generate_poster_task(
+    self,
+    request_data: Dict[str, Any],
+    session_id: Optional[str] = None,
+):
+    """Genere une affiche (ou un ZIP multi-themes) et la stocke dans S3."""
+    started_at = time.monotonic()
+    request = PosterRequest(**request_data)
+    storage.ensure_bucket()
+
+    request_hash = _request_hash(request)
+    file_key = _build_file_key(request, request_hash)
+
+    # ------------------------------------------------------------------
+    # 1. Cache S3
+    # ------------------------------------------------------------------
+    if storage.object_exists(file_key):
+        _record_object(session_id, file_key)
+        logger.info("Cache hit (hash=%s)", request_hash[:12])
+        return {"success": True, "file_key": file_key, "cached": True}
+
+    try:
         if request.all_themes:
-            # MULTI-THEME ZIP MODE
-            from backend.utils import list_themes
-            import zipfile
-            
-            themes_to_render = list_themes()
-            if not themes_to_render:
-                themes_to_render = [request.style]
+            # ----------------------------------------------------------
+            # 2a. Mode multi-themes : un seul telechargement OSM
+            # ----------------------------------------------------------
+            themes_to_render = list_themes() or [request.style]
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 15,
+                    "total": 100,
+                    "status": f"Preparing {len(themes_to_render)} themes...",
+                },
+            )
 
-            self.update_state(state='PROGRESS', meta={'current': 15, 'total': 100, 'status': f'Preparing {len(themes_to_render)} themes...'})
-
-            # 2. Fetch Data (ONCE)
             async def _fetch_once():
-                 lat, lon = await get_coordinates(request.city, request.country)
-                 # Dummy theme for data fetching logic if it relied on it (it doesn't heavily)
-                 # But we need to ensure we fetch everything needed.
-                 # Actually fetcher handles custom layers.
-                 
-                 aspect = request.width / request.height
-                 max_dim = max(request.width, request.height)
-                 min_dim = min(request.width, request.height)
-                 ratio = max_dim / min_dim
-                 compensated_dist = request.distance * ratio
-                 
-                 return lat, lon, await MapDataFetcher.fetch_all(lat, lon, compensated_dist, request.custom_layers)
+                lat, lon = await get_coordinates(request.city, request.country)
+                # Le renderer recadre toujours dans un carre de rayon
+                # `distance` : inutile de sur-telecharger selon le ratio.
+                data = await MapDataFetcher.fetch_all(
+                    lat, lon, request.distance, request.custom_layers
+                )
+                return lat, lon, data
 
-            try:
-                lat, lon, data = asyncio.run(_fetch_once())
-            except Exception:
-                lat, lon, data = asyncio.new_event_loop().run_until_complete(_fetch_once())
+            lat, lon, data = _run_async(_fetch_once())
+            if not data.get("graph"):
+                raise ValueError("No map data found.")
 
-            if not data.get('graph'): raise ValueError("No map data found.")
-            
-            # 3. Render Loop
             zip_buffer = BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                total = len(themes_to_render)
-                for i, theme_id in enumerate(themes_to_render):
-                    pct = 30 + int((i / total) * 60)
-                    self.update_state(state='PROGRESS', meta={'current': pct, 'total': 100, 'status': f'Rendering {theme_id} ({i+1}/{total})...'})
-                    
-                    theme_cfg = load_theme(theme_id)
-                    # Apply custom overrides if any (though usually all_themes implies defaults, let's keep overrides if feasible, though user might want pure themes)
-                    # Use overrides if they make sense, or maybe skip? The user prompt implies "Generate ONE poster per theme".
-                    # Custom colors usually apply ONE style. Overriding ALL themes with ONE custom color set makes them identical.
-                    # So we ignore custom_colors for all_themes mode except maybe text?
-                    # Let's ignore custom_colors to keep themes distinct.
-                    
-                    renderer = MapRenderer(theme_cfg)
-                    fig = renderer.render(
-                        data=data,
-                        city=request.city,
-                        country=request.country,
-                        point=(lat, lon),
-                        dist=request.distance,
-                        width_in=request.width,
-                        height_in=request.height,
-                        custom_layers_config=request.custom_layers,
-                        text_CONFIG={'country_label': request.country_label, 'name_label': request.name_label},
-                        margins=request.margins
-                    )
-                    
-                    # Print to buf
-                    img_buf = BytesIO()
-                    fmt = request.format.lower()
-                    
-                    if fmt == 'svg': canvas = FigureCanvasSVG(fig)
-                    elif fmt == 'pdf': canvas = FigureCanvasPdf(fig)
-                    else: canvas = FigureCanvasAgg(fig)
+            total_bytes = 0
+            try:
+                with zipfile.ZipFile(
+                    zip_buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=6
+                ) as archive:
+                    total_themes = len(themes_to_render)
+                    for index, theme_id in enumerate(themes_to_render):
+                        percent = 30 + int((index / total_themes) * 60)
+                        self.update_state(
+                            state="PROGRESS",
+                            meta={
+                                "current": percent,
+                                "total": 100,
+                                "status": (
+                                    f"Rendering {theme_id} "
+                                    f"({index + 1}/{total_themes})..."
+                                ),
+                            },
+                        )
+                        theme_config = load_theme(theme_id)
+                        payload = _render_to_bytes(
+                            theme_config, data, request, (lat, lon)
+                        )
+                        total_bytes += len(payload)
+                        if total_bytes > settings.max_archive_bytes:
+                            raise ValueError(
+                                "L'archive demandee depasse la taille maximale autorisee."
+                            )
+                        archive.writestr(
+                            f"{safe_slug(request.city)}_{theme_id}.{request.format}",
+                            payload,
+                        )
+                        del payload
 
-                    canvas.print_figure(img_buf, format=fmt, dpi=request.dpi, facecolor=theme_cfg['bg'])
-                    plt.close(fig)
-                    
-                    # Add to zip
-                    img_filename = f"{safe_city}_{theme_id}.{fmt}"
-                    zf.writestr(img_filename, img_buf.getvalue())
-                    img_buf.close()
-
-            # Upload ZIP
-            zip_filename = f"{safe_city}_ALL_THEMES_{req_hash[:8]}.zip"
-            zip_buffer.seek(0)
-            
-            s3.upload_fileobj(zip_buffer, S3_BUCKET, zip_filename, ExtraArgs={'ContentType': 'application/zip'})
-            zip_buffer.close()
-            
-            return {
-                "success": True, 
-                "file_url": build_public_url(zip_filename),
-                "cached": False
-            }
+                zip_buffer.seek(0)
+                storage.upload_fileobj(
+                    zip_buffer,
+                    file_key,
+                    _CONTENT_TYPES["zip"],
+                )
+            finally:
+                zip_buffer.close()
 
         else:
-            # SINGLE MODE (Existing Logic)
-            self.update_state(state='PROGRESS', meta={'current': 10, 'total': 100, 'status': 'Decoding parameters...'})
-    
-            # Async Logic Wrapper
-            async def _async_logic():
+            # ----------------------------------------------------------
+            # 2b. Mode mono-theme
+            # ----------------------------------------------------------
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 10,
+                    "total": 100,
+                    "status": "Decoding parameters...",
+                },
+            )
+
+            async def _render_once():
                 lat, lon = await get_coordinates(request.city, request.country)
                 theme = load_theme(request.style)
-                 
-                if request.custom_colors:
-                    cc = request.custom_colors
-                    if cc.bg: theme['bg'] = cc.bg
-                    if cc.water: theme['water'] = cc.water
-                    if cc.parks: theme['parks'] = cc.parks
-                    if cc.text: theme['text'] = cc.text
-                    if cc.roads:
-                        for k in list(theme.keys()):
-                            if k.startswith('road_'):
-                                theme[k] = cc.roads
-    
-                aspect = request.width / request.height
-                max_dim = max(request.width, request.height)
-                min_dim = min(request.width, request.height)
-                ratio = max_dim / min_dim
-                compensated_dist = request.distance * ratio
-                
-                data = await MapDataFetcher.fetch_all(lat, lon, compensated_dist, request.custom_layers)
-                return lat, lon, theme, data
-    
-            self.update_state(state='PROGRESS', meta={'current': 20, 'total': 100, 'status': 'Fetching map data...'})
-            
-            try:
-                 lat, lon, theme, data = asyncio.run(_async_logic())
-            except Exception:
-                 lat, lon, theme, data = asyncio.new_event_loop().run_until_complete(_async_logic())
-    
-            if not data.get('graph'):
-                 raise ValueError("Could not retrieve map data for this location.")
-    
-            self.update_state(state='PROGRESS', meta={'current': 60, 'total': 100, 'status': 'Rendering map...'})
-    
-            # 4. Render
-            renderer = MapRenderer(theme)
-            fig = renderer.render(
-                data=data,
-                city=request.city,
-                country=request.country,
-                point=(lat, lon),
-                dist=request.distance,
-                width_in=request.width,
-                height_in=request.height,
-                custom_layers_config=request.custom_layers,
-                text_CONFIG={
-                    'country_label': request.country_label,
-                    'name_label': request.name_label
-                },
-                margins=request.margins
-            )
-    
-            self.update_state(state='PROGRESS', meta={'current': 90, 'total': 100, 'status': 'Uploading to cloud...'})
-    
-            # 5. Save to Buffer & Upload
-            fmt = request.format.lower()
-            if fmt == 'svg':
-                canvas = FigureCanvasSVG(fig)
-            elif fmt == 'pdf':
-                canvas = FigureCanvasPdf(fig)
-            else:
-                canvas = FigureCanvasAgg(fig)
-            
-            buf = BytesIO()
-            # Strict sizing: no bbox_tight, use exact dpi
-            canvas.print_figure(buf, format=fmt, dpi=request.dpi, facecolor=theme['bg'])
-            buf.seek(0)
-            
-            # Upload
-            content_type = f"image/{fmt}" if fmt != 'svg' else 'image/svg+xml'
-            if fmt == 'pdf': content_type = 'application/pdf'
-            
-            s3.upload_fileobj(
-                buf, 
-                S3_BUCKET, 
-                file_key,
-                ExtraArgs={'ContentType': content_type}
-            )
-            
-            plt.close(fig)
-            buf.close()
-    
-            return {
-                "success": True, 
-                "file_url": build_public_url(filename),
-                "cached": False
-            }
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise e
+                if request.custom_colors:
+                    colors = request.custom_colors
+                    if colors.bg:
+                        theme["bg"] = colors.bg
+                    if colors.water:
+                        theme["water"] = colors.water
+                    if colors.parks:
+                        theme["parks"] = colors.parks
+                    if colors.text:
+                        theme["text"] = colors.text
+                    if colors.roads:
+                        for key in list(theme.keys()):
+                            if key.startswith("road_"):
+                                theme[key] = colors.roads
+
+                data = await MapDataFetcher.fetch_all(
+                    lat, lon, request.distance, request.custom_layers
+                )
+                return lat, lon, theme, data
+
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 20,
+                    "total": 100,
+                    "status": "Fetching map data...",
+                },
+            )
+            lat, lon, theme, data = _run_async(_render_once())
+
+            if not data.get("graph"):
+                raise ValueError("Could not retrieve map data for this location.")
+
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 60,
+                    "total": 100,
+                    "status": "Rendering map...",
+                },
+            )
+            payload = _render_to_bytes(theme, data, request, (lat, lon))
+            if len(payload) > settings.max_archive_bytes:
+                raise ValueError("Le fichier demande depasse la taille maximale autorisee.")
+
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 90,
+                    "total": 100,
+                    "status": "Uploading to cloud...",
+                },
+            )
+            with BytesIO(payload) as upload_buffer:
+                storage.upload_fileobj(
+                    upload_buffer, file_key, _CONTENT_TYPES[request.format]
+                )
+
+        _record_object(session_id, file_key)
+        logger.info(
+            "Affiche generee (hash=%s, %.1fs)",
+            request_hash[:12],
+            time.monotonic() - started_at,
+        )
+        return {"success": True, "file_key": file_key, "cached": False}
+
+    except Exception:
+        logger.exception("Echec de generation (hash=%s)", request_hash[:12])
+        raise
+
+    finally:
+        # Libere les graphes/geometries avant le prochain task du worker.
+        data = None
+        theme = None
+        gc.collect()
+        _maybe_cleanup_storage()
+
+
+@task_postrun.connect
+def _release_active_slot(
+    task_id=None,
+    task=None,
+    args=None,
+    kwargs=None,
+    retval=None,
+    state=None,
+    **extra,
+):
+    """Libere le compteur de taches actives de la session, meme en cas d'echec."""
+    session_id = (kwargs or {}).get("session_id")
+    if not session_id:
+        return
+    try:
+        client = get_redis()
+        key = f"active:{session_id}"
+        remaining = client.decr(key)
+        if remaining <= 0:
+            client.delete(key)
+    except Exception as exc:  # pragma: no cover - depend de Redis
+        logger.warning("Liberation du slot de session impossible: %s", exc)

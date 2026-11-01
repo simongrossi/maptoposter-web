@@ -1,0 +1,4 @@
+# Dependances de developpement / tests (non installees dans l'image Docker).
+-r requirements.txt
+pytest
+pytest-mock

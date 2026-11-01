@@ -1,31 +1,33 @@
-FROM node:22-alpine AS builder
+# Frontend SvelteKit SSR
+# Base figee : node:22.14.0-alpine3.21
+
+FROM node:22.14.0-alpine3.21 AS builder
 
 WORKDIR /app
+
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
 COPY . .
-# Build SvelteKit application
-# Note: User must ensure adapter-node is used for Docker environment
-RUN npm run build
-# Prune dev dependencies for cleaner image
-RUN npm prune --production --legacy-peer-deps
+RUN npm run build \
+    && npm prune --omit=dev --legacy-peer-deps
 
-# --- Final Stage ---
-FROM node:22-alpine
+# --- Image finale -----------------------------------------------------------
+FROM node:22.14.0-alpine3.21
 
 WORKDIR /app
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/themes ./themes
 
-# Expose SvelteKit port
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
+
+COPY --from=builder --chown=node:node /app/build ./build
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+COPY --from=builder --chown=node:node /app/themes ./themes
+
+USER node
+
 EXPOSE 3000
-
-ENV PORT=3000
-ENV HOST=0.0.0.0
-# The frontend needs to talk to the backend, url defined in docker-compose usually
-# ENV API_URL=http://api:8000 
 
 CMD ["node", "build"]

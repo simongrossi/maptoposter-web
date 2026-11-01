@@ -70,7 +70,10 @@
     // Validation
     $: isCityValid = city?.trim().length > 0;
     $: isCountryValid = country?.trim().length > 0;
-    $: isDistanceValid = distance >= 1000 && distance <= 100000;
+    $: isDistanceValid = distance >= 1000 && distance <= 25000;
+    // Meme plafond que le backend (100 Mpx) pour eviter un aller-retour 422.
+    $: outputPixels = width * height * dpi * dpi;
+    $: isOutputTooLarge = outputPixels > 100_000_000;
 
     // Presets Logic
     let presets: Preset[] = [];
@@ -262,7 +265,7 @@
             <input
                 type="range"
                 min="1000"
-                max="100000"
+                max="25000"
                 step="500"
                 bind:value={distance}
                 on:input={onDistanceChange}
@@ -270,7 +273,8 @@
             />
             {#if !isDistanceValid}
                 <span class="error-msg"
-                    >La distance doit être entre 1km et 100km</span
+                    >La distance doit être entre 1 km et 25 km (limite de
+                    mémoire du worker)</span
                 >
             {/if}
         </div>
@@ -465,6 +469,8 @@
                         id="w-input"
                         type="number"
                         step="0.1"
+                        min="1"
+                        max="40"
                         bind:value={width}
                         aria-label="Largeur personnalisée en pouces"
                     />
@@ -475,6 +481,8 @@
                         id="h-input"
                         type="number"
                         step="0.1"
+                        min="1"
+                        max="40"
                         bind:value={height}
                         aria-label="Hauteur personnalisée en pouces"
                     />
@@ -491,6 +499,13 @@
                     <option value={600}>600 (High-Res)</option>
                 </select>
             </div>
+            {#if isOutputTooLarge}
+                <span class="error-msg"
+                    >Résolution trop élevée ({Math.round(outputPixels / 1_000_000)}
+                    Mpx, maximum 100 Mpx). Réduisez les dimensions ou le
+                    DPI.</span
+                >
+            {/if}
             <div class="form-group">
                 <label for="margin-input">Marge ({margins}")</label>
                 <input

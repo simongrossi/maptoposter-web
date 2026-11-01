@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-11-01
+
+**Security hardening and VPS deployment.**
+
+### Security
+- **Redis**: no published port, password required (`REDIS_PASSWORD`), internal
+  Docker network, `maxmemory` with `noeviction`, healthcheck.
+- **Storage**: MinIO replaced by **VersityGW** (`versity/versitygw:v1.10.0`),
+  private bucket, credentials from environment, no anonymous policy, no
+  console, no published port.
+- **Posters**: private bucket + HMAC-signed expiring download URLs streamed by
+  the API. Legacy `/minio_storage/` now returns `410`.
+- **API**: signed anonymous sessions, per-IP daily quota, per-session
+  concurrency cap, global queue cap, request size limit, ownership checks on
+  task status/history/download. CORS removed. OpenAPI docs disabled by default.
+- **Validation**: strict Pydantic models (theme path traversal, format,
+  distance, dimensions, DPI, pixel budget, custom layers/colors, extra fields).
+- **Worker**: 2 GiB memory limit, concurrency 1, one process per task, soft/hard
+  timeouts, sanitized client errors, Matplotlib mathtext disabled for labels.
+- **Containers**: pinned images, non-root API/worker/web, `no-new-privileges`,
+  `cap_drop`, log rotation, `.dockerignore` excluding `.env`.
+- **Retention**: posters older than 7 days or beyond 2000 objects are deleted
+  lazily (Redis lock).
+
+### Added
+- `.env.example` with no default secret, `scripts/init-env.sh` secret generator.
+- `SECURITY.md` threat model, residual risks and verification checklist.
+- VPS + Caddy deployment guide, Compose config validation in CI, security tests.
+- `docker compose` healthchecks and restart policies for api/redis/storage/nginx.
+- Storage/runtime resource limits and per-service CPU limits.
+
+### Changed
+- Storage interface preserved for the worker (S3/boto3), so the Celery task
+  contract is unchanged; the worker now returns `file_key` and the API signs it.
+- Frontend proxies forward the session cookie and `Set-Cookie`; custom paper
+  sizes are no longer ignored by the SvelteKit proxy.
+- Distance capped at 25 km and output at 100 Mpx, with client-side validation.
+- History is scoped to the current session ("Historique de session").
+- Removed the obsolete root `Dockerfile` (unused monolith, unpinned base).
+- Moved `pytest` / `pytest-mock` to `requirements-dev.txt`; the production
+  image no longer ships test tooling.
+- Removed the legacy `/posters/{filename}` route and the committed
+  `static/posters/*.png` files: they exposed old generated maps (personal
+  locations) and are no longer used now that posters come from private S3.
+
+### Fixed
+- `CACHE_DIR` environment variable was ignored by `backend/cache.py`.
+- `S3_PUBLIC_URL` / `build_public_url` were referenced but undefined in
+  `/history`, causing silent empty history.
+- Public `/history` and `/download/{task_id}` leaked other users' posters.
+- Path traversal through the `style` parameter in `load_theme`.
+- Unbounded `distance`/`width`/`height`/`dpi` could OOM the worker.
+
 ## [2.1.1] - 2026-01-23
 
 ### Fixed

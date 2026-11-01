@@ -1,3 +1,4 @@
-# allow crawling everything by default
+# MapPoster : ne pas indexer les endpoints API ni les téléchargements signés.
 User-agent: *
-Disallow:
+Disallow: /api/
+Disallow: /posters/

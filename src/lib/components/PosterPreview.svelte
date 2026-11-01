@@ -5,6 +5,16 @@
     export let files: string[] = []; // Current session generated
     let history: any[] = [];
 
+    // Les URLs signees contiennent ?expires=...&signature=... : le nom de
+    // fichier et le type doivent etre lus sur le chemin seul.
+    function fileName(file: string): string {
+        return file.split("?")[0].split("/").pop() || "";
+    }
+
+    function isZip(file: string): boolean {
+        return fileName(file).toLowerCase().endsWith(".zip");
+    }
+
     onMount(async () => {
         history = await fetchHistory();
     });
@@ -19,11 +29,11 @@
         <div class="posters-scroll">
             {#each files as file}
                 <div class="mini-card new">
-                    <span class="filename" title={file}
-                        >{file.split("/").pop()}</span
+                    <span class="filename" title={fileName(file)}
+                        >{fileName(file)}</span
                     >
                     <div class="actions">
-                        {#if file.endsWith(".zip")}
+                        {#if isZip(file)}
                             <a
                                 href={file}
                                 class="zip-btn"
@@ -42,7 +52,7 @@
 
     <!-- History -->
     {#if history.length > 0}
-        <div class="section-title">Historique global</div>
+        <div class="section-title">Historique de session</div>
         <div class="posters-scroll history-list">
             {#each history as item}
                 <div class="mini-card">

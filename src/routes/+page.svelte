@@ -271,7 +271,12 @@
         country &&
         country.trim().length > 0 &&
         distance >= 1000 &&
-        distance <= 100000;
+        distance <= 25000 &&
+        width >= 1 &&
+        width <= 40 &&
+        height >= 1 &&
+        height <= 40 &&
+        width * height * dpi * dpi <= 100_000_000;
 </script>
 
 <div class="app-container">

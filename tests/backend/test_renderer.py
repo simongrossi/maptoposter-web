@@ -1,15 +1,18 @@
 import pytest
-from backend.renderer import MapRenderer
-from backend.models import CustomLayer
-from typing import Dict, Any
+
+pytest.importorskip("matplotlib")
+pytest.importorskip("osmnx")
+
+from backend.models import CustomLayer  # noqa: E402
+from backend.renderer import MapRenderer  # noqa: E402
+
 
 def test_renderer_initialization():
-    """Test renderer initializes with a theme."""
+    """Le renderer s'initialise avec un theme."""
     theme = {"bg": "#fff", "water": "#00f", "road_primary": "#000"}
     renderer = MapRenderer(theme)
     assert renderer.theme == theme
 
-# Unit testing the actual 'render' method is hard without real Data/Geopandas objects.
-# We would need to mock the entire 'data' dictionary with valid GeoDataFrames.
-# For Phase 5 'Safety Net', ensuring the class initializes is a good start.
-# A more advanced test would mock OSM fetcher data.
+
+# Le rendu complet necessite de vraies GeoDataFrames OSMnx ; il est couvert
+# par les tests d'integration du worker.

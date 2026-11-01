@@ -75,6 +75,8 @@ export async function generatePoster(
         }
 
         // 2. Poll Status
+        const pollingStartedAt = Date.now();
+        const maxPollingMs = 20 * 60 * 1000; // Garde-fou client : 20 minutes.
         let pollDelayMs = 1000;
         const maxPollDelayMs = 5000;
         let lastProgress = -1;
@@ -83,12 +85,26 @@ export async function generatePoster(
         while (true) {
             // Check abort signal
             if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+            if (Date.now() - pollingStartedAt > maxPollingMs) {
+                return {
+                    success: false,
+                    files: [],
+                    error: "Délai de génération dépassé. Réessayez avec une zone plus petite."
+                };
+            }
 
             const jitterMs = Math.floor(Math.random() * 200);
             await new Promise(r => setTimeout(r, pollDelayMs + jitterMs));
 
             const statusRes = await fetch(`/api/tasks/${task_id}`, { signal });
-            if (!statusRes.ok) continue; // Retry polling on glitch? or fail? Let's continue.
+            if (statusRes.status === 404 || statusRes.status === 403) {
+                return {
+                    success: false,
+                    files: [],
+                    error: "Tâche introuvable ou expirée. Relancez la génération."
+                };
+            }
+            if (!statusRes.ok) continue; // Hoquet réseau : on retente.
 
             const task = await statusRes.json();
 
@@ -111,7 +127,7 @@ export async function generatePoster(
                 // Frontend expects { success, files: [] } or something.
                 // My tasks.py returns { success, file_url, ... }
                 // Let's adapt it.
-                const result = task.result;
+                const result = task.result ?? {};
                 return {
                     success: true,
                     files: result.file_url ? [result.file_url] : [], // Use full URL from S3

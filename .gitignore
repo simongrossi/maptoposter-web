@@ -24,3 +24,11 @@ vite.config.ts.timestamp-*
 /.cache
 /cache
 *.png
+/static/posters/
+
+# Python local
+.venv
+.venv-*
+__pycache__
+*.pyc
+.pytest_cache

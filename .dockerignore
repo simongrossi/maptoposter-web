@@ -1,0 +1,23 @@
+# Contexte de build minimal : ne jamais envoyer de secrets ni de dependances
+# locales dans l'image.
+.git
+.gitignore
+.github
+.env
+.env.*
+!.env.example
+node_modules
+.svelte-kit
+build
+tests
+.venv
+.venv-*
+__pycache__
+*.pyc
+.cache
+cache
+playwright-report
+test-results
+*.png
+.DS_Store
+Thumbs.db
