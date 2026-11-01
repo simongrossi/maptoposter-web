@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-11-01
+
+### Added
+- **Modern UI refresh**: shared dark design tokens, a full-height app shell, a
+  responsive secondary-page header, refreshed controls, inputs, cards, map
+  controls, progress panel, and poster list.
+- **Geolocation**: a “Ma position” control on the map uses the browser
+  Geolocation API to center the preview on the visitor and reverse-geocode the
+  position into the city/country fields.
+- **Documentation**: a rewritten, production-oriented README with badges,
+  architecture, API overview, deployment, operations, and troubleshooting.
+
+### Fixed
+- Removed the leftover global navigation bar that displayed default blue links
+  above the full-screen generator and added unintended page padding.
+- Made the map overlay and Leaflet zoom controls responsive on small screens.
+- Fixed the truncated “Position” field in the ranking builder.
+
+### Changed
+- Map controls and attribution now follow the application's dark visual style.
+- Version bumped to 2.3.0.
+
 ## [2.2.1] - 2026-11-01
 
 ### Fixed

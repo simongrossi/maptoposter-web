@@ -920,4 +920,201 @@
     details.section > :not(summary) {
         margin-top: 12px;
     }
+
+    /* ---------------------------------------------------------------------
+       Surcouche visuelle moderne : surfaces, focus, switches et cartes.
+       Les variables viennent du layout global.
+       --------------------------------------------------------------------- */
+    .section {
+        margin-bottom: 8px;
+    }
+
+    details.section {
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    details.section[open] {
+        padding: 0 12px 10px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.018);
+    }
+
+    .section-summary {
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        transition:
+            background 0.18s ease,
+            color 0.18s ease;
+    }
+
+    .section-summary:hover {
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+    }
+
+    .section-summary::after {
+        content: "";
+        width: 7px;
+        height: 7px;
+        margin-left: auto;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: rotate(45deg);
+        opacity: 0.7;
+        transition: transform 0.2s ease;
+    }
+
+    details.section[open] > .section-summary {
+        margin-bottom: 12px;
+        padding: 10px 0 12px;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
+        color: var(--text);
+    }
+
+    details.section[open] > .section-summary::after {
+        transform: rotate(225deg);
+    }
+
+    details.section > :not(summary) {
+        margin-top: 0;
+    }
+
+    .form-group {
+        margin-bottom: 14px;
+    }
+
+    label,
+    .label,
+    .color-item label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+        background: var(--panel-2);
+        border-color: var(--border);
+        border-radius: 10px;
+        color: var(--text);
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+    }
+
+    .btn-search,
+    .btn-small {
+        background: var(--panel-2);
+        border-color: var(--border);
+        border-radius: 10px;
+        color: var(--text);
+    }
+
+    .btn-search:hover,
+    .btn-small:hover:not(:disabled) {
+        background: var(--panel);
+        border-color: var(--border-strong);
+        color: var(--accent);
+    }
+
+    input[type="range"] {
+        background: var(--border);
+        border-radius: 999px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        background: var(--accent);
+        box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.14);
+    }
+
+    .slider {
+        background-color: var(--border-strong);
+    }
+
+    input:checked + .slider {
+        background-color: var(--accent);
+    }
+
+    .label-text {
+        color: var(--text);
+    }
+
+    .layer-settings {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+    }
+
+    .paper-preview {
+        background: var(--panel-2);
+        border-color: var(--border);
+        border-radius: 12px;
+    }
+
+    .paper-preview-frame {
+        background: var(--panel);
+        border-radius: 9px;
+    }
+
+    .paper-preview-sheet {
+        background: var(--panel-2);
+        border-color: rgba(103, 232, 249, 0.45);
+        box-shadow: inset 0 0 0 2px rgba(103, 232, 249, 0.1);
+    }
+
+    .paper-preview-meta {
+        color: var(--accent);
+    }
+
+    .radio-card {
+        background: var(--panel-2);
+        border-color: var(--border);
+        border-radius: 10px;
+        color: var(--muted);
+    }
+
+    .radio-card.active {
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        border-color: transparent;
+        color: #06121a;
+    }
+
+    .radio-card:hover:not(.active) {
+        background: var(--panel);
+        border-color: var(--border-strong);
+        color: var(--text);
+    }
+
+    .preset-item {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+    }
+
+    .preset-name:hover {
+        color: var(--accent);
+    }
+
+    .error-msg {
+        color: var(--danger);
+        line-height: 1.4;
+    }
+
+    .empty-msg {
+        color: var(--muted);
+    }
 </style>

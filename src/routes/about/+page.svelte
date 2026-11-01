@@ -64,72 +64,75 @@
 
 <style>
     .about-container {
-        padding: 40px;
-        max-width: 800px;
+        padding: 0;
+        max-width: 820px;
         margin: 0 auto;
-        color: #e0e0e0;
-        font-family: "Inter", sans-serif;
+        color: var(--text);
     }
 
     .content {
-        background: #25262b;
+        background: var(--panel);
         padding: 40px;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        border: 1px solid #2c2e33;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
     }
 
     h1 {
-        font-size: 2.5rem;
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        letter-spacing: -0.04em;
         margin-bottom: 24px;
-        background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
         background-clip: text;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
     h2 {
-        font-size: 1.5rem;
+        font-size: 1.35rem;
+        letter-spacing: -0.02em;
         margin-top: 32px;
         margin-bottom: 20px;
         padding-bottom: 10px;
-        border-bottom: 1px solid #373a40;
+        border-bottom: 1px solid var(--border);
     }
 
     h3 {
-        font-size: 1.1rem;
-        color: #fff;
+        font-size: 1.02rem;
+        color: var(--text);
         margin-bottom: 8px;
     }
 
     p {
-        color: #c1c2c5;
-        line-height: 1.6;
+        color: var(--muted);
+        line-height: 1.65;
         margin-bottom: 16px;
     }
 
     a {
-        color: #4dabf7;
+        color: var(--accent);
         text-decoration: none;
         transition: color 0.2s;
     }
 
     a:hover {
-        color: #74c0fc;
+        color: var(--accent-2);
         text-decoration: underline;
+        text-underline-offset: 3px;
     }
 
     .credit-item {
-        margin-bottom: 24px;
+        margin-bottom: 16px;
         padding: 16px;
-        background: #2c2e33;
-        border-radius: 8px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
     }
 
     .libs-list {
         list-style-type: none;
         padding: 0;
-        color: #c1c2c5;
+        color: var(--muted);
     }
 
     .libs-list li {
@@ -138,19 +141,28 @@
 
     .btn-back {
         display: inline-block;
-        margin-top: 32px;
-        padding: 10px 20px;
-        background: #373a40;
-        color: white;
-        border-radius: 6px;
+        margin-top: 28px;
+        padding: 10px 18px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 10px;
         text-decoration: none;
-        font-weight: 500;
-        transition: background 0.2s;
+        font-weight: 600;
+        transition:
+            border-color 0.18s ease,
+            color 0.18s ease;
     }
 
     .btn-back:hover {
-        background: #4dabf7;
-        color: white;
+        border-color: rgba(103, 232, 249, 0.4);
+        color: var(--accent);
         text-decoration: none;
+    }
+
+    @media (max-width: 640px) {
+        .content {
+            padding: 24px;
+        }
     }
 </style>

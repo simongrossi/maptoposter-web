@@ -1,4 +1,4 @@
-# Architecture Technique (v2.2)
+# Architecture Technique (v2.3)
 
 Ce document decrit le fonctionnement interne de **MapPoster**, concu selon une
 architecture microservices asynchrone et durcie pour un VPS mono-noeud.
@@ -12,6 +12,9 @@ architecture microservices asynchrone et durcie pour un VPS mono-noeud.
 - `MapSelector.svelte` met a jour la previsualisation Leaflet.
 - Le navigateur recoit une session anonyme signee (`mp_session`) emise par
   l'API lors du premier appel `/api/*`.
+- Le bouton **« Ma position »** utilise la Geolocation API du navigateur
+  (autorisation explicite) pour recentrer la carte et reverse-geocoder la
+  position via Nominatim.
 
 ### 2. Soumission (API Dispatch)
 

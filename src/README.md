@@ -4,6 +4,8 @@ Application **SvelteKit** moderne utilisant TypeScript.
 
 ## 📂 Structure
 
+- **`routes/+layout.svelte`** : shell global (plein écran sur `/`, header
+  moderne sur les pages secondaires), variables de design et styles de base.
 - **`routes/+page.svelte`** : Le Chef d'Orchestre.
     - Il ne contient PAS de logique métier complexe (juste le State Management global).
     - Il importe et coordonne les composants "intelligents".
@@ -14,6 +16,16 @@ Application **SvelteKit** moderne utilisant TypeScript.
     - `GenerationProgress.svelte` : Barre de progression.
 - **`lib/api.ts`** :
     - Abstraction de `fetch`. Contient la logique de **Polling** (`pollTaskStatus`) qui transforme l'API asynchrone en Promise résolue.
+
+## 📍 Géolocalisation
+
+Le bouton **« Ma position »** de `MapSelector.svelte` appelle
+`navigator.geolocation.getCurrentPosition()` après une action explicite de
+l'utilisateur. En cas de succès, il replace le marqueur, le rectangle de
+prévisualisation et la vue, puis lance un reverse geocoding Nominatim pour
+préremplir la ville et le pays. Un refus de permission affiche un message dans
+le bandeau d'erreur et ne modifie pas la carte. L'API Geolocation exige un
+contexte HTTPS (ou `localhost`).
 
 ## 📱 Mobile & Responsive
 

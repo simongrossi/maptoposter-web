@@ -66,10 +66,96 @@
 {/if}
 
 <style>
-  h1 { margin-bottom: 1rem; }
-  .filters { display: flex; gap: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
-  .hint { color: #666; margin: 0.25rem 0 1rem; }
-  ol { display: grid; gap: 0.5rem; }
-  li { border: 1px solid #ddd; border-radius: 8px; padding: 0.75rem; }
-  small { color: #666; }
+  h1 {
+    margin: 0 0 1.4rem;
+    font-size: clamp(1.7rem, 3vw, 2.35rem);
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+
+  .filters {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 0.5rem;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+  }
+
+  .filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .hint {
+    color: var(--muted);
+    font-size: 0.84rem;
+    margin: 0.4rem 0 1.2rem;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel-2);
+    color: var(--text);
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  input:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+  }
+
+  ol {
+    display: grid;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+  }
+
+  li strong {
+    font-size: 0.94rem;
+  }
+
+  small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 900px) {
+    .filters {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>

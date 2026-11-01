@@ -18,6 +18,8 @@ __pycache__
 cache
 playwright-report
 test-results
+docs
 *.png
+*.webp
 .DS_Store
 Thumbs.db

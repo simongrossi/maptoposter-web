@@ -1,7 +1,7 @@
 # Securite de MapPoster Web
 
 Ce document decrit le modele de menace, les mesures appliquees et les risques
-residuels. Il correspond a la version `2.2.1` de la stack Docker.
+residuels. Il correspond a la version `2.3.0` de la stack Docker.
 
 ## 1. Modele de menace
 
@@ -182,6 +182,8 @@ Images figees :
   contexte de build.
 - Documentation OpenAPI desactivee par defaut (`ENABLE_DOCS=false`).
 - CORS ouvert supprime.
+- `Permissions-Policy: geolocation=(self)` pour autoriser uniquement le bouton
+  « Ma position » sur notre origine ; camera et microphone restent bloques.
 - Sentry : `send_default_pii=False`, `max_request_body_size="never"`, traces
   echantillonnees a 10 % par defaut, profilage desactive.
 
@@ -271,6 +273,11 @@ Ces risques sont acceptes ou necessitent une action d'exploitation.
 17. **Rate limiting en memoire.** SlowAPI utilise un stockage local au
     processus. La stack lance une seule instance API ; si elle est scalee, il
     faut configurer un stockage Redis pour que les limites soient globales.
+18. **Geolocalisation.** Le bouton « Ma position » est strictement opt-in et
+    declenche la demande d'autorisation du navigateur. Les coordonnees sont
+    envoyees directement a Nominatim pour le reverse geocoding via HTTPS ; elles
+    ne sont ni stockees par MapPoster ni incluses dans les posters sans action
+    de l'utilisateur. Un refus de permission laisse la carte inchangee.
 
 ## 6. Verification apres deploiement
 

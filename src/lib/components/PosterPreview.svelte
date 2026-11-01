@@ -82,14 +82,14 @@
 
 <style>
     .results-container {
-        margin-top: 24px;
-        padding-top: 16px;
-        border-top: 1px solid #2c2e33;
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
     }
 
     .empty-state {
-        color: #5c5f66;
-        font-size: 0.85rem;
+        color: var(--muted);
+        font-size: 0.84rem;
         font-style: italic;
         text-align: center;
         padding: 12px;
@@ -97,10 +97,19 @@
 
     h4 {
         margin: 0 0 12px 0;
-        font-size: 0.8rem;
+        font-size: 0.76rem;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #909296;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+    }
+
+    .section-title {
+        margin: 14px 0 8px;
+        font-size: 0.74rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
     }
 
     .posters-scroll {
@@ -115,23 +124,32 @@
     }
 
     .posters-scroll::-webkit-scrollbar-track {
-        background: #2c2e33;
+        background: transparent;
     }
 
     .posters-scroll::-webkit-scrollbar-thumb {
-        background: #5c5f66;
-        border-radius: 3px;
+        background: var(--border-strong);
+        border-radius: 999px;
     }
 
     .mini-card {
-        background: #373a40;
-        border: 1px solid #484b51;
-        border-radius: 6px;
-        padding: 10px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        padding: 10px 12px;
         margin-bottom: 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 10px;
+        transition:
+            border-color 0.18s ease,
+            background 0.18s ease;
+    }
+
+    .mini-card:hover {
+        background: var(--panel);
+        border-color: var(--border-strong);
     }
 
     .filename {
@@ -142,27 +160,45 @@
         max-width: 200px;
     }
 
+    .actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+    }
+
     .actions a {
         text-decoration: none;
-        margin-left: 8px;
-        font-size: 1.1rem;
-        color: #909296;
+        font-size: 1.05rem;
+        color: var(--muted);
         transition: color 0.2s;
     }
 
     .actions a:hover {
-        color: white;
+        color: var(--text);
     }
 
     .zip-btn {
-        background: #4dabf7;
-        color: white !important;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem !important;
-        font-weight: 600;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #06121a !important;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 0.72rem !important;
+        font-weight: 700;
     }
+
     .zip-btn:hover {
-        background: #339af0;
+        filter: brightness(1.06);
+    }
+
+    .date,
+    .city {
+        color: var(--muted);
+        font-size: 0.78rem;
+    }
+
+    .city {
+        color: var(--text);
+        font-weight: 500;
     }
 </style>

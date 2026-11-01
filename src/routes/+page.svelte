@@ -284,13 +284,22 @@
         <header>
             <div class="logo">MAP<span class="highlight">POSTER</span></div>
             <p class="subtitle">Générateur d'affiches cartographiques</p>
+            <div class="header-meta">
+                <span class="status-dot"></span>
+                OpenStreetMap · aperçu live
+            </div>
             <button
                 class="sidebar-close"
+                aria-label="Fermer les paramètres"
                 on:click={() => (mobileMenuOpen = false)}>×</button
             >
         </header>
 
-        <form class="controls" on:submit|preventDefault={handleSubmit}>
+        <form
+            class="controls"
+            aria-busy={loading}
+            on:submit|preventDefault={handleSubmit}
+        >
             <!-- Controls Component -->
             <SidebarControls
                 bind:city
@@ -328,7 +337,7 @@
             {/if}
 
             {#if errorMsg}
-                <div class="error-banner">
+                <div class="error-banner" role="alert">
                     {errorMsg}
                 </div>
             {/if}
@@ -354,7 +363,11 @@
     </aside>
 
     <main class="map-area">
-        <button class="mobile-toggle" on:click={() => (mobileMenuOpen = true)}>
+        <button
+            class="mobile-toggle"
+            aria-label="Ouvrir les paramètres"
+            on:click={() => (mobileMenuOpen = true)}
+        >
             ⚙️ Paramètres
             {#if !mobileMenuOpen}
                 <span class="settings-dot"></span>
@@ -374,62 +387,93 @@
 </div>
 
 <style>
-    :global(body) {
-        margin: 0;
-        font-family:
-            "Inter",
-            -apple-system,
-            BlinkMacSystemFont,
-            "Segoe UI",
-            Roboto,
-            sans-serif;
-        background: #1a1b1e;
-        color: #e0e0e0;
-    }
-
     .app-container {
         display: flex;
         height: 100vh;
-        width: 100vw;
+        height: 100dvh;
+        width: 100%;
         overflow: hidden;
+        background: var(--bg);
     }
 
     /* Sidebar Styles */
     .sidebar {
         width: 380px;
-        background: #25262b;
-        border-right: 1px solid #2c2e33;
+        background: linear-gradient(
+            180deg,
+            rgba(20, 25, 34, 0.98),
+            rgba(10, 13, 18, 0.99)
+        );
+        border-right: 1px solid var(--border);
         display: flex;
         flex-direction: column;
         z-index: 1000;
-        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+        box-shadow: 24px 0 80px rgba(0, 0, 0, 0.35);
     }
 
     header {
-        padding: 24px;
-        background: #1a1b1e;
-        border-bottom: 1px solid #2c2e33;
+        position: relative;
+        padding: 26px 24px 22px;
+        background: transparent;
+        border-bottom: 1px solid var(--border);
     }
 
     .logo {
-        font-size: 1.5rem;
+        font-size: 1.55rem;
         font-weight: 800;
-        color: white;
-        letter-spacing: -0.5px;
+        color: var(--text);
+        letter-spacing: -0.04em;
+        line-height: 1;
     }
 
     .highlight {
-        color: #4dabf7;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
     }
 
     .subtitle {
-        color: #909296;
-        font-size: 0.85rem;
-        margin: 4px 0 0 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+        margin: 8px 0 0 0;
+    }
+
+    .header-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 14px;
+        padding: 5px 9px;
+        border: 1px solid rgba(103, 232, 249, 0.18);
+        background: rgba(103, 232, 249, 0.06);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 500;
+    }
+
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+        animation: pulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
     }
 
     .controls {
-        padding: 24px;
+        padding: 22px 24px 28px;
         flex: 1;
         overflow-y: auto;
         min-height: 0;
@@ -440,54 +484,66 @@
         width: 6px;
     }
     .controls::-webkit-scrollbar-track {
-        background: #2c2e33;
+        background: transparent;
     }
     .controls::-webkit-scrollbar-thumb {
-        background: #5c5f66;
-        border-radius: 3px;
+        background: var(--border-strong);
+        border-radius: 999px;
     }
 
     .btn-generate {
         width: 100%;
-        padding: 12px;
-        background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
-        color: white;
+        padding: 14px 16px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #06121a;
         border: none;
-        border-radius: 6px;
+        border-radius: 12px;
         font-size: 1rem;
-        font-weight: 600;
+        font-weight: 800;
+        letter-spacing: -0.01em;
         cursor: pointer;
         transition:
-            transform 0.1s,
-            box-shadow 0.2s;
-        margin-top: 10px;
+            transform 0.16s ease,
+            box-shadow 0.2s ease,
+            filter 0.2s ease;
+        margin-top: 14px;
+        box-shadow: 0 14px 34px rgba(96, 165, 250, 0.22);
     }
 
     .btn-generate:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(51, 154, 240, 0.3);
+        filter: brightness(1.06);
+        box-shadow: 0 18px 44px rgba(96, 165, 250, 0.3);
+    }
+
+    .btn-generate:active:not(:disabled) {
+        transform: translateY(0);
     }
 
     .btn-generate:disabled {
-        opacity: 0.5;
         cursor: not-allowed;
-        background: #373a40;
+        background: var(--panel-2);
+        color: var(--muted);
+        box-shadow: none;
     }
 
     .error-banner {
         margin-top: 16px;
-        padding: 12px;
-        background: #fa5252;
-        color: white;
-        border-radius: 6px;
-        font-size: 0.9rem;
+        padding: 12px 14px;
+        background: rgba(251, 113, 133, 0.1);
+        border: 1px solid rgba(251, 113, 133, 0.28);
+        color: #fecdd3;
+        border-radius: 10px;
+        font-size: 0.88rem;
+        line-height: 1.45;
     }
 
     /* Map Area */
     .map-area {
         flex: 1;
+        min-width: 0;
         position: relative;
-        background: #1a1b1e;
+        background: var(--bg);
     }
 
     .map-overlay {
@@ -499,20 +555,22 @@
     }
 
     .info-badge {
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(10, 13, 18, 0.72);
+        backdrop-filter: blur(14px);
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
         pointer-events: auto;
         cursor: default;
     }
 
     .sidebar-footer {
-        padding: 24px;
-        border-top: 1px solid #2c2e33;
+        padding: 20px 24px 22px;
+        border-top: 1px solid var(--border);
         margin-top: auto;
     }
 
@@ -520,31 +578,33 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #909296;
+        color: var(--muted);
         text-decoration: none;
-        font-size: 0.85rem;
+        font-size: 0.84rem;
         transition: color 0.2s;
     }
 
     .sidebar-footer a:hover {
-        color: #4dabf7;
+        color: var(--accent);
     }
 
     .credits {
         margin-bottom: 8px;
-        font-size: 0.8rem;
-        color: #909296;
+        font-size: 0.78rem;
+        color: var(--muted);
     }
 
     .made-by a {
-        color: #e0e0e0;
+        color: var(--text);
         text-decoration: underline;
-        text-underline-offset: 2px;
+        text-decoration-color: rgba(255, 255, 255, 0.25);
+        text-underline-offset: 3px;
         font-weight: 500;
     }
 
     .made-by a:hover {
-        color: #4dabf7;
+        color: var(--accent);
+        text-decoration-color: var(--accent);
     }
     /* Responsive Styles */
     @media (max-width: 768px) {
@@ -566,6 +626,13 @@
             transform: translateX(0);
         }
 
+        /* Le badge et le zoom Leaflet sont masqués sur mobile : le bouton
+           Paramètres occupe déjà le coin supérieur gauche et la carte se
+           manipule au doigt. */
+        .map-overlay {
+            display: none;
+        }
+
         /* Show mobile toggles */
         .mobile-toggle {
             display: flex !important;
@@ -582,25 +649,27 @@
         top: 20px;
         left: 20px;
         z-index: 600;
-        background: #25262b;
-        border: 1px solid #373a40;
-        color: white;
+        background: rgba(13, 17, 22, 0.78);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text);
         padding: 10px 16px;
-        border-radius: 30px;
+        border-radius: 999px;
         font-weight: 600;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         align-items: center;
         gap: 8px;
-        animation: bounce 2s infinite;
+        animation: bounce 2.8s ease-in-out infinite;
     }
 
     .settings-dot {
         width: 8px;
         height: 8px;
-        background: #fa5252;
+        background: var(--danger);
         border-radius: 50%;
         display: inline-block;
+        box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.12);
     }
 
     @keyframes bounce {
@@ -623,11 +692,29 @@
         display: none;
         position: absolute;
         top: 20px;
-        right: 20px;
+        right: 18px;
         background: transparent;
         border: none;
-        color: #909296;
+        color: var(--muted);
         font-size: 1.5rem;
         cursor: pointer;
+    }
+
+    @media (min-width: 769px) and (max-width: 1100px) {
+        .sidebar {
+            width: 350px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .settings-dot,
+        .mobile-toggle,
+        .status-dot {
+            animation: none;
+        }
+
+        * {
+            transition-duration: 0.01ms !important;
+        }
     }
 </style>
