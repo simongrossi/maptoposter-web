@@ -136,8 +136,9 @@
             handleMarkerDragEnd();
         });
 
-        // Trigger initial lookup
-        lookupAddress(initialDefaults.lat, initialDefaults.lng);
+        // Pas de reverse geocoding au chargement : la ville/pays par defaut
+        // sont deja remplis, et cela evite une requete Nominatim inutile qui
+        // entre en concurrence avec le bouton « Ma position ».
     }
 
     function calculateBounds(center: L.LatLng): L.LatLngBoundsExpression {
@@ -221,41 +222,82 @@
         }
     }
 
-    function lookupAddress(lat: number, lng: number, force = false) {
-        if (isProgrammaticMove && !force) return;
+    const reverseCache = new Map<
+        string,
+        { city: string; country: string; at: number }
+    >();
+    const REVERSE_CACHE_TTL = 10 * 60 * 1000;
+
+    async function reverseGeocode(lat: number, lng: number) {
+        const cacheKey = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+        const cached = reverseCache.get(cacheKey);
+        if (cached && Date.now() - cached.at < REVERSE_CACHE_TTL) {
+            if (cached.city || cached.country) {
+                dispatch("locationSelect", {
+                    city: cached.city,
+                    country: cached.country,
+                    lat,
+                    lng,
+                });
+            }
+            return;
+        }
+
+        // Timeout court : le reverse geocoding ne doit jamais bloquer l'UI.
+        const controller = new AbortController();
+        const abortTimer = setTimeout(() => controller.abort(), 6000);
+
+        try {
+            const url =
+                "https://nominatim.openstreetmap.org/reverse" +
+                `?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`;
+            const res = await fetch(url, {
+                headers: { "Accept-Language": "fr" },
+                signal: controller.signal,
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            if (data && data.address) {
+                const city =
+                    data.address.city ||
+                    data.address.town ||
+                    data.address.village ||
+                    data.address.municipality ||
+                    data.address.county ||
+                    "";
+                const country = data.address.country || "";
+
+                if (city || country) {
+                    reverseCache.set(cacheKey, {
+                        city,
+                        country,
+                        at: Date.now(),
+                    });
+                    dispatch("locationSelect", {
+                        city,
+                        country,
+                        lat,
+                        lng,
+                    });
+                }
+            }
+        } catch (e) {
+            // AbortError = timeout volontaire, pas une erreur utilisateur.
+            if ((e as Error)?.name !== "AbortError") {
+                console.error("Reverse geocoding failed", e);
+            }
+        } finally {
+            clearTimeout(abortTimer);
+        }
+    }
+
+    function lookupAddress(lat: number, lng: number) {
+        if (isProgrammaticMove) return;
 
         if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(async () => {
-            try {
-                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
-                const res = await fetch(url, {
-                    headers: { "User-Agent": "MapToPosterClient/1.0" },
-                });
-                const data = await res.json();
-
-                if (data && data.address) {
-                    const city =
-                        data.address.city ||
-                        data.address.town ||
-                        data.address.village ||
-                        data.address.municipality ||
-                        data.address.county ||
-                        "";
-                    const country = data.address.country || "";
-
-                    // Only dispatch if meaningful
-                    if (city || country) {
-                        dispatch("locationSelect", {
-                            city,
-                            country,
-                            lat,
-                            lng,
-                        });
-                    }
-                }
-            } catch (e) {
-                console.error("Geocoding failed", e);
-            }
+        timeout = setTimeout(() => {
+            void reverseGeocode(lat, lng);
         }, 800);
     }
     /**
@@ -263,7 +305,7 @@
      * Le navigateur demande l'autorisation ; l'appel doit être déclenché par
      * une action utilisateur, ce qui est le cas de ce bouton.
      */
-    function locateUser() {
+    async function locateUser() {
         if (!map || !marker || !leaflet || locating) return;
 
         if (!("geolocation" in navigator)) {
@@ -275,6 +317,27 @@
         }
 
         locating = true;
+
+        // Si l'autorisation est deja refusee, inutile d'attendre le timeout
+        // de getCurrentPosition : on affiche le message tout de suite.
+        if (navigator.permissions?.query) {
+            try {
+                const permission = await navigator.permissions.query({
+                    name: "geolocation" as PermissionName,
+                });
+                if (permission.state === "denied") {
+                    locating = false;
+                    dispatch("error", {
+                        message:
+                            "Localisation bloquée. Autorisez l'accès à votre position dans les réglages du navigateur.",
+                    });
+                    return;
+                }
+            } catch {
+                // API Permissions absente ou refusée : on continue.
+            }
+        }
+
         try {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -286,8 +349,11 @@
                     isProgrammaticMove = true;
                     marker.setLatLng(latlng);
                     updatePreviewRectangle(latlng);
-                    map.setView(latlng, 13);
-                    lookupAddress(latlng.lat, latlng.lng, true);
+                    // Pas d'animation : le recentrage doit être perçu comme
+                    // instantané, surtout sur mobile.
+                    map.setView(latlng, 13, { animate: false });
+                    // Reverse geocoding immédiat, sans le debounce de 800 ms.
+                    void reverseGeocode(latlng.lat, latlng.lng);
 
                     setTimeout(() => {
                         isProgrammaticMove = false;
@@ -310,8 +376,10 @@
                 },
                 {
                     enableHighAccuracy: false,
-                    timeout: 10000,
-                    maximumAge: 300000,
+                    // 6 s au lieu de 10 s : au-dela, on prefere un message
+                    // clair a une attente qui donne l'impression de ramer.
+                    timeout: 6000,
+                    maximumAge: 600000,
                 },
             );
         } catch {
@@ -481,6 +549,18 @@
        s'applique qu'au calque des tuiles, pas au marqueur ni au rectangle. */
     .map-container :global(.leaflet-tile-pane) {
         transition: filter 0.2s ease;
+        /* Force la composition GPU du calque filtré : évite les saccades
+           pendant le pan/zoom sur mobile. */
+        will-change: filter;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+    }
+
+    @media (max-width: 768px) {
+        .map-container :global(.leaflet-tile-pane) {
+            /* Le filtre est statique sur mobile : pas d'animation coûteuse. */
+            transition: none;
+        }
     }
 
     .map-container.tiles-dark :global(.leaflet-tile-pane) {

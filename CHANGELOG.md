@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026-11-01
+
+### Fixed
+- **Geolocation responsiveness**: removed the useless reverse-geocoding request
+  fired on every map load, lowered the geolocation timeout to 6 s, increased the
+  accepted cached position age to 10 minutes, and checked the Permissions API
+  before calling `getCurrentPosition` so a denied permission fails immediately.
+- Reverse geocoding now runs immediately after a geolocation fix (no 800 ms
+  debounce), aborts after 6 s, uses a 10-minute client-side cache, and no longer
+  sends a forbidden `User-Agent` header from the browser.
+- The geolocation recenter no longer animates the zoom, and the filtered tile
+  pane is promoted to its own GPU layer to reduce mobile pan/zoom jank.
+
 ## [2.3.0] - 2026-11-01
 
 ### Added
