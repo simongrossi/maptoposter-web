@@ -191,12 +191,35 @@ def generate_poster_task(
                 },
             )
 
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 20,
+                    "total": 100,
+                    "status": "Downloading OSM road network...",
+                },
+            )
+
+            def _graph_ready():
+                self.update_state(
+                    state="PROGRESS",
+                    meta={
+                        "current": 40,
+                        "total": 100,
+                        "status": "Downloading water and parks...",
+                    },
+                )
+
             async def _fetch_once():
                 lat, lon = await get_coordinates(request.city, request.country)
                 # Le renderer recadre toujours dans un carre de rayon
                 # `distance` : inutile de sur-telecharger selon le ratio.
                 data = await MapDataFetcher.fetch_all(
-                    lat, lon, request.distance, request.custom_layers
+                    lat,
+                    lon,
+                    request.distance,
+                    request.custom_layers,
+                    on_graph_ready=_graph_ready,
                 )
                 return lat, lon, data
 
@@ -212,7 +235,7 @@ def generate_poster_task(
                 ) as archive:
                     total_themes = len(themes_to_render)
                     for index, theme_id in enumerate(themes_to_render):
-                        percent = 30 + int((index / total_themes) * 60)
+                        percent = 50 + int((index / total_themes) * 40)
                         self.update_state(
                             state="PROGRESS",
                             meta={
@@ -261,6 +284,16 @@ def generate_poster_task(
                 },
             )
 
+            def _graph_ready():
+                self.update_state(
+                    state="PROGRESS",
+                    meta={
+                        "current": 40,
+                        "total": 100,
+                        "status": "Downloading water and parks...",
+                    },
+                )
+
             async def _render_once():
                 lat, lon = await get_coordinates(request.city, request.country)
                 theme = load_theme(request.style)
@@ -281,7 +314,11 @@ def generate_poster_task(
                                 theme[key] = colors.roads
 
                 data = await MapDataFetcher.fetch_all(
-                    lat, lon, request.distance, request.custom_layers
+                    lat,
+                    lon,
+                    request.distance,
+                    request.custom_layers,
+                    on_graph_ready=_graph_ready,
                 )
                 return lat, lon, theme, data
 
@@ -290,7 +327,7 @@ def generate_poster_task(
                 meta={
                     "current": 20,
                     "total": 100,
-                    "status": "Fetching map data...",
+                    "status": "Downloading OSM road network...",
                 },
             )
             lat, lon, theme, data = _run_async(_render_once())

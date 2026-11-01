@@ -162,6 +162,9 @@ default value**: Compose refuses to start if they are missing. See
 | `MAX_OUTPUT_PIXELS` | Maximum output size (default `100000000`) |
 | `POSTER_RETENTION_DAYS` | Poster retention (default `7`) |
 | `MAX_STORED_POSTERS` | Maximum stored objects (default `2000`) |
+| `OSM_NETWORK_TYPE` | OSMnx network type (default `drive`; `all` is much slower) |
+| `OSM_REQUEST_TIMEOUT` | Overpass request timeout in seconds (default `150`) |
+| `OVERPASS_URL` | Overpass endpoint (default `https://overpass-api.de/api`) |
 
 Advanced settings (task timeouts, worker recycle threshold, queue name,
 Nominatim user agent, Sentry, log level) are documented in `.env.example`.
@@ -249,6 +252,9 @@ docker compose up -d
 ```
 
 Named volumes (`redis_data`, `posters_data`, `osm_cache`) are preserved.
+The backend entrypoint repairs the ownership of an existing `osm_cache` volume
+before dropping to the non-root `app` user, so no manual volume deletion is
+needed when upgrading from an older root-based worker.
 
 ---
 
@@ -342,6 +348,21 @@ docker compose stop
 docker compose start
 ```
 
+### OSM download performance
+
+The first generation for an area is dominated by Overpass. Two settings matter:
+
+- `OSM_NETWORK_TYPE=drive` (default) downloads the drivable street network.
+  `all` also downloads footpaths and cycleways and can be several times slower
+  and much larger in memory.
+- `OSM_REQUEST_TIMEOUT=150` gives large areas enough time to answer instead of
+  failing on a 30-second timeout.
+
+OSMnx responses and the processed graph are cached under
+`/.cache/osmnx` and the worker cache volume. Repeating the same city and
+distance is therefore much faster. If `overpass-api.de` is slow from your VPS,
+set `OVERPASS_URL` to a faster Overpass instance and restart the worker.
+
 ---
 
 ## Security
@@ -373,7 +394,7 @@ The full threat model, residual risks, and post-deployment checklist are in
 | Map tiles are blank | OSM tile service unreachable or blocked by the browser/network. Check the browser console and the OSM usage policy. |
 | “API KEY REQUIRED” on the map | An old frontend build still references CARTO tiles. Rebuild `web`: `docker compose build web && docker compose up -d web`. |
 | “My location” does nothing | The site must be served over HTTPS, and the browser must grant geolocation permission. |
-| Generation takes a long time or fails with “No map data” | Overpass/Nominatim may be slow or rate-limiting. Retry, reduce the distance, or self-host the geocoding/Overpass service. |
+| Generation takes a long time or fails with “No map data” | Overpass/Nominatim may be slow or rate-limiting. Keep `OSM_NETWORK_TYPE=drive` (the default) instead of `all`, reduce the distance, or point `OVERPASS_URL` to a faster instance. The first request for an area is cached; repeats are much faster. |
 | 413 on generate | Request body exceeds the 64 KB gateway limit. |
 | 403 on a poster URL | The signed URL expired. Reload the history or regenerate the poster. |
 

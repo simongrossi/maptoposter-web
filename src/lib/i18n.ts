@@ -11,6 +11,8 @@ export const t = {
     status: {
         decoding: "Analyse des paramètres...",
         fetching: "Téléchargement des données OSM...",
+        fetchingRoads: "Téléchargement du réseau routier...",
+        fetchingFeatures: "Téléchargement des plans d'eau et parcs...",
         rendering: "Rendu de la carte...",
         uploading: "Envoi vers le cloud...",
         success: "Terminé !",
@@ -21,6 +23,8 @@ export const t = {
 export function getStatusLabel(backendStatus: string): string {
     const s = backendStatus.toLowerCase();
     if (s.includes("decoding")) return t.status.decoding;
+    if (s.includes("road network")) return t.status.fetchingRoads;
+    if (s.includes("water and parks")) return t.status.fetchingFeatures;
     if (s.includes("fetching")) return t.status.fetching;
     if (s.includes("rendering")) return t.status.rendering;
     if (s.includes("uploading")) return t.status.uploading;

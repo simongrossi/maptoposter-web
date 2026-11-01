@@ -40,7 +40,10 @@ COPY --chown=app:app themes/ ./themes/
 RUN mkdir -p /.cache /app/.cache /tmp/matplotlib \
     && chown -R app:app /.cache /app/.cache /tmp/matplotlib
 
-ENV PYTHONUNBUFFERED=1 \
+COPY --chmod=755 backend/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+ENV HOME=/home/app \
+    PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     MALLOC_ARENA_MAX=2 \
     OMP_NUM_THREADS=1 \
@@ -50,8 +53,9 @@ ENV PYTHONUNBUFFERED=1 \
     CACHE_DIR=/app/.cache \
     MPLCONFIGDIR=/tmp/matplotlib
 
-USER app
-
+# L'entrypoint demarre en root pour reparer un volume de cache existant, puis
+# execute le processus applicatif en UID 10001 via setpriv.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 EXPOSE 8000
 
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -186,7 +186,7 @@ services:
       CELERY_RESULT_TTL: ${CELERY_RESULT_TTL:-3600}
       WORKER_MAX_MEMORY_KB: ${WORKER_MAX_MEMORY_KB:-1500000}
       CELERY_QUEUE: ${CELERY_QUEUE:-celery}
-      NOMINATIM_USER_AGENT: "${NOMINATIM_USER_AGENT:-MapPoster/2.2 (+https://github.com/simongrossi/maptoposter-web)}"
+      NOMINATIM_USER_AGENT: "${NOMINATIM_USER_AGENT:-MapPoster/2.3.2 (+https://github.com/simongrossi/maptoposter-web)}"
       GEOCODE_TIMEOUT: ${GEOCODE_TIMEOUT:-10}
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
@@ -194,6 +194,11 @@ services:
       MPLCONFIGDIR: /app/.cache/matplotlib
     cap_drop:
       - ALL
+    cap_add:
+      # Uniquement pour l'entrypoint : chown du volume de cache puis setpriv.
+      - CHOWN
+      - SETUID
+      - SETGID
     tmpfs:
       - /tmp:size=64m,mode=1777
     networks:
@@ -269,8 +274,11 @@ services:
       CELERY_RESULT_TTL: ${CELERY_RESULT_TTL:-3600}
       WORKER_MAX_MEMORY_KB: ${WORKER_MAX_MEMORY_KB:-1500000}
       CELERY_QUEUE: ${CELERY_QUEUE:-celery}
-      NOMINATIM_USER_AGENT: "${NOMINATIM_USER_AGENT:-MapPoster/2.2 (+https://github.com/simongrossi/maptoposter-web)}"
+      NOMINATIM_USER_AGENT: "${NOMINATIM_USER_AGENT:-MapPoster/2.3.2 (+https://github.com/simongrossi/maptoposter-web)}"
       GEOCODE_TIMEOUT: ${GEOCODE_TIMEOUT:-10}
+      OSM_NETWORK_TYPE: ${OSM_NETWORK_TYPE:-drive}
+      OSM_REQUEST_TIMEOUT: ${OSM_REQUEST_TIMEOUT:-150}
+      OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api}
       CACHE_DIR: /.cache
       MPLCONFIGDIR: /.cache/matplotlib
       PYTHONUNBUFFERED: "1"
@@ -282,6 +290,11 @@ services:
       NUMEXPR_NUM_THREADS: "1"
     cap_drop:
       - ALL
+    cap_add:
+      # Uniquement pour l'entrypoint : chown du volume de cache puis setpriv.
+      - CHOWN
+      - SETUID
+      - SETGID
     volumes:
       - osm_cache:/.cache
     tmpfs:
@@ -346,3 +359,4 @@ volumes:
   redis_data:
   posters_data:
   osm_cache:
+

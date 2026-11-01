@@ -1,7 +1,7 @@
 # Securite de MapPoster Web
 
 Ce document decrit le modele de menace, les mesures appliquees et les risques
-residuels. Il correspond a la version `2.3.1` de la stack Docker.
+residuels. Il correspond a la version `2.3.2` de la stack Docker.
 
 ## 1. Modele de menace
 
@@ -172,10 +172,14 @@ Images figees :
 | api / worker | build local depuis `python:3.11.11-slim-bookworm` |
 | web | build local depuis `node:22.14.0-alpine3.21` |
 
-- API, worker et frontend tournent avec un utilisateur non privilegie
-  (`app` UID 10001, `node`).
+- API et worker demarrent via un entrypoint qui repare l'ownership du volume de
+  cache puis abandonne les privileges avec `setpriv` ; le processus applicatif
+  tourne en `app` UID 10001. Le frontend tourne en `node`.
 - `no-new-privileges:true` sur tous les services.
-- `cap_drop: [ALL]` sur `api`, `worker` et `web` (aucun privilege Linux requis).
+- `cap_drop: [ALL]` sur `api`, `worker` et `web`. `api` et `worker` ne
+  recoivent que `CHOWN`, `SETUID` et `SETGID` pour l'entrypoint (chown du
+  volume de cache puis `setpriv` vers UID 10001) ; le processus applicatif
+  n'a plus ces privileges.
 - Aucun montage du socket Docker, aucun mode `privileged`, aucun port autre que
   `127.0.0.1:8080`.
 - `.dockerignore` exclut `.env`, `.git`, `node_modules`, tests et caches du

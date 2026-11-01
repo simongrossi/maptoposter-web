@@ -147,6 +147,11 @@ class Settings:
     result_ttl: int
     worker_max_memory_kb: int
 
+    # OpenStreetMap / Overpass
+    osm_network_type: str
+    osm_request_timeout: int
+    overpass_url: str
+
     # Retention
     poster_retention_days: int
     max_stored_posters: int
@@ -192,6 +197,19 @@ class Settings:
                 "TASK_TIME_LIMIT doit etre strictement superieur a "
                 "TASK_SOFT_TIME_LIMIT."
             )
+        if self.osm_network_type not in {
+            "all",
+            "drive",
+            "drive_service",
+            "walk",
+            "bike",
+        }:
+            raise ConfigError(
+                "OSM_NETWORK_TYPE doit valoir all, drive, drive_service, "
+                "walk ou bike."
+            )
+        if not self.overpass_url.startswith("https://"):
+            raise ConfigError("OVERPASS_URL doit utiliser HTTPS.")
 
     @property
     def sentry_enabled(self) -> bool:
@@ -283,11 +301,19 @@ def load_settings() -> Settings:
         ),
         nominatim_user_agent=_optional(
             "NOMINATIM_USER_AGENT",
-            "MapPoster/2.2 (+https://github.com/simongrossi/maptoposter-web)",
+            "MapPoster/2.3.2 (+https://github.com/simongrossi/maptoposter-web)",
         ),
         timezone=_optional("TZ", "Europe/Paris"),
         geocode_timeout=_integer("GEOCODE_TIMEOUT", 10, minimum=1, maximum=60),
+        osm_network_type=_optional("OSM_NETWORK_TYPE", "drive").lower(),
+        osm_request_timeout=_integer(
+            "OSM_REQUEST_TIMEOUT", 150, minimum=30, maximum=300
+        ),
+        overpass_url=_optional(
+            "OVERPASS_URL", "https://overpass-api.de/api"
+        ).rstrip("/"),
     )
 
 
 settings = load_settings()
+

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2] - 2026-11-01
+
+### Fixed
+- **OSM download performance**: OSMnx wrote its HTTP cache to `./cache`
+  (relative to `/app`), a directory the non-root `app` user cannot write. A
+  successful Overpass response therefore raised `PermissionError`, causing
+  failed/slow downloads. The cache now lives in `/.cache/osmnx`.
+- The default OSM network type is now `drive` instead of `all`. Footpaths and
+  cycleways made the Overpass query much larger and slower; `all` remains
+  available through `OSM_NETWORK_TYPE=all`.
+- Raised the Overpass request timeout from 30 s to 150 s and made the endpoint
+  configurable with `OVERPASS_URL`.
+- Split OSM acquisition into road-network and water/parks stages, publishing
+  progress between them. The graph cache key now includes the network type so a
+  cached `all` graph cannot be reused for `drive`.
+- Added a backend entrypoint that repairs the ownership of an existing
+  root-owned `osm_cache` volume, then drops to the `app` user with `setpriv`.
+
+### Changed
+- The UI no longer shows a misleading linear ETA during the OSM download; it
+  displays an explicit “1 to 3 minutes depending on the area” hint until the
+  rendering stage.
+
 ## [2.3.1] - 2026-11-01
 
 ### Fixed

@@ -225,7 +225,18 @@
                 // Use getStatusLabel to translate or fallback
                 progressText = getStatusLabel(text);
 
-                if (percent > 0 && percent < 100) {
+                // Le telechargement OSM est la phase la plus variable : un
+                // pourcentage lineaire y produit une ETA tres trompeuse.
+                const isOsmFetch =
+                    /fetching map data|road network|water and parks|downloading osm/i.test(
+                        text,
+                    );
+
+                if (isOsmFetch && percent < 60) {
+                    smoothedEtaSeconds = null;
+                    progressEtaText =
+                        "Téléchargement OpenStreetMap — 1 à 3 min selon la zone";
+                } else if (percent > 0 && percent < 100) {
                     const elapsed = (Date.now() - generationStart) / 1000;
                     const progressRatio = percent / 100;
                     let remaining = 0;
