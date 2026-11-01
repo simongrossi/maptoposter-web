@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.4] - 2026-11-01
+
+### Fixed
+- **Small zones returning “no OSM data”**: the security hardening moved the
+  worker to a non-root user, but OSMnx's internal cache stayed at `./cache`
+  under `/app`, which is not writable. Successful Overpass responses could be
+  discarded with a `PermissionError`. The cache now lives in `/.cache/osmnx`,
+  and an entrypoint repairs existing root-owned cache volumes. This was the
+  main regression compared with the earlier root-based deployment.
+- **`OSM_NETWORK_TYPE=auto`** now uses the full pedestrian/cycle network for
+  zones up to 5 km and the drivable network above. A small pedestrian area can
+  therefore no longer return an empty graph just because `drive` has no edge
+  there.
+- **False “quota reached” errors**: the per-session active-job counter is now
+  released idempotently both by `task_postrun` and when the API observes a
+  terminal status. A lost Celery signal can no longer leave the session blocked
+  for 15 minutes.
+- 429 errors now distinguish the short-term rate limit, the daily quota, and a
+  concurrent generation. The “no OSM data” message no longer incorrectly tells
+  users to reduce a distance that is already small.
+
 ## [2.3.3] - 2026-11-01
 
 ### Fixed

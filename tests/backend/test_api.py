@@ -123,6 +123,15 @@ def test_history_is_scoped_to_session(client, fake_redis):
     assert response.json() == []
 
 
+def test_active_slot_release_is_idempotent(fake_redis):
+    from backend.redis_client import release_active_slot
+
+    fake_redis.set("active:test-session", 1)
+    release_active_slot(fake_redis, "task-1", "test-session")
+    release_active_slot(fake_redis, "task-1", "test-session")
+    assert fake_redis.get("active:test-session") is None
+
+
 def test_city_is_reconstructed_from_object_key():
     from backend.main import _city_from_key
 

@@ -21,3 +21,30 @@ def get_redis() -> redis.Redis:
             health_check_interval=30,
         )
     return _client
+
+
+def release_active_slot(
+    client: redis.Redis,
+    task_id: str,
+    session_id: str | None,
+    marker_ttl: int = 3600,
+) -> None:
+    """Libere le compteur de taches actives d'une session, une seule fois.
+
+    Le worker (`task_postrun`) et l'API (statut terminal) peuvent tous les deux
+    appeler cette fonction : le marqueur Redis rend l'operation idempotente.
+    """
+    if not session_id or not task_id:
+        return
+    try:
+        marker = f"slot_released:{task_id}"
+        if not client.set(marker, "1", nx=True, ex=marker_ttl):
+            return
+        key = f"active:{session_id}"
+        remaining = client.decr(key)
+        if remaining <= 0:
+            client.delete(key)
+    except Exception:
+        # Redis indisponible : le TTL du compteur actif reste le filet de
+        # securite. On ne casse jamais la reponse client pour autant.
+        return

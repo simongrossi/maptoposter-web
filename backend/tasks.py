@@ -29,7 +29,7 @@ from backend import storage
 from backend.celery_app import celery_app
 from backend.fetcher import MapDataFetcher
 from backend.models import PosterRequest
-from backend.redis_client import get_redis
+from backend.redis_client import get_redis, release_active_slot
 from backend.renderer import MapRenderer
 from backend.settings import settings
 from backend.utils import get_coordinates, list_themes, load_theme, safe_slug
@@ -392,13 +392,9 @@ def _release_active_slot(
 ):
     """Libere le compteur de taches actives de la session, meme en cas d'echec."""
     session_id = (kwargs or {}).get("session_id")
-    if not session_id:
+    if not session_id or not task_id:
         return
     try:
-        client = get_redis()
-        key = f"active:{session_id}"
-        remaining = client.decr(key)
-        if remaining <= 0:
-            client.delete(key)
+        release_active_slot(get_redis(), task_id, session_id)
     except Exception as exc:  # pragma: no cover - depend de Redis
         logger.warning("Liberation du slot de session impossible: %s", exc)

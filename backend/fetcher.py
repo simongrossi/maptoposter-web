@@ -54,22 +54,35 @@ class MapDataFetcher:
     """Telecharge graphe routier et geometries OSM, avec cache disque."""
 
     @staticmethod
+    def network_type_for(dist: float) -> str:
+        """Choisit le reseau adapte a la taille de la zone.
+
+        `auto` conserve le detail pieton/cyclable des petites zones (ou le
+        cout est faible) et bascule sur le reseau carrossable pour les grandes
+        zones, beaucoup plus rapide.
+        """
+        if settings.osm_network_type == "auto":
+            return "all" if dist <= 5000 else "drive"
+        return settings.osm_network_type
+
+    @staticmethod
     def _graph_cache_key(point, dist: float) -> str:
         # Le type de reseau fait partie de la cle : sinon un graphe `all`
         # precedemment cache serait reutilise apres passage a `drive`.
         return (
-            f"graph_v2_{settings.osm_network_type}_"
+            f"graph_v3_{MapDataFetcher.network_type_for(dist)}_"
             f"{point[0]}_{point[1]}_{dist}"
         )
 
     @staticmethod
     def _fetch_graph_sync(point, dist):
         key = MapDataFetcher._graph_cache_key(point, dist)
+        network_type = MapDataFetcher.network_type_for(dist)
         cached = DiskCache.get(key)
         if cached is not None:
             logger.info(
                 "Graphe OSM en cache (type=%s, dist=%s)",
-                settings.osm_network_type,
+                network_type,
                 dist,
             )
             return cached
@@ -80,14 +93,14 @@ class MapDataFetcher:
                 point,
                 dist=dist,
                 dist_type="bbox",
-                network_type=settings.osm_network_type,
+                network_type=network_type,
                 truncate_by_edge=True,
             )
             DiskCache.set(key, graph)
             logger.info(
                 "Graphe OSM telecharge en %.1fs (type=%s, %s noeuds)",
                 time.monotonic() - started_at,
-                settings.osm_network_type,
+                network_type,
                 len(graph),
             )
             return graph

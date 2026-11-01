@@ -48,10 +48,20 @@ export async function generatePoster(
                 detail = "";
             }
             if (res.status === 429) {
+                const reason = String(detail || "").toLowerCase();
+                let message =
+                    "Trop de requêtes. Réessayez dans une minute.";
+                if (reason.includes("daily")) {
+                    message =
+                        "Quota journalier atteint. Réessayez demain ou augmentez DAILY_GENERATE_QUOTA.";
+                } else if (reason.includes("concurrent")) {
+                    message =
+                        "Une génération est déjà en cours pour cette session. Attendez qu'elle se termine.";
+                }
                 return {
                     success: false,
                     files: [],
-                    error: "Quota atteint. Veuillez réessayer dans quelques minutes."
+                    error: message
                 };
             }
             if (res.status === 422) {
@@ -137,8 +147,13 @@ export async function generatePoster(
                 const rawError = task.error || "Erreur inconnue";
                 let message = rawError;
                 if (typeof rawError === "string") {
-                    if (rawError.includes("No map data found") || rawError.includes("Could not retrieve map data")) {
-                        message = "Aucune donnée OSM disponible pour cette zone. Essayez une distance plus petite.";
+                    if (
+                        rawError.includes("Unable to download OSM") ||
+                        rawError.includes("No map data") ||
+                        rawError.includes("Could not retrieve map data")
+                    ) {
+                        message =
+                            "Impossible de récupérer les données OSM pour cette zone. Overpass est peut-être indisponible ; réessayez dans quelques instants.";
                     } else if (rawError.includes("Nominatim")) {
                         message = "Le service de géocodage est temporairement indisponible. Réessayez plus tard.";
                     }

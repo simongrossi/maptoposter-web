@@ -199,6 +199,7 @@ class Settings:
                 "TASK_SOFT_TIME_LIMIT."
             )
         if self.osm_network_type not in {
+            "auto",
             "all",
             "drive",
             "drive_service",
@@ -206,8 +207,8 @@ class Settings:
             "bike",
         }:
             raise ConfigError(
-                "OSM_NETWORK_TYPE doit valoir all, drive, drive_service, "
-                "walk ou bike."
+                "OSM_NETWORK_TYPE doit valoir auto, all, drive, "
+                "drive_service, walk ou bike."
             )
         if not self.overpass_url.startswith("https://"):
             raise ConfigError("OVERPASS_URL doit utiliser HTTPS.")
@@ -306,7 +307,7 @@ def load_settings() -> Settings:
         ),
         timezone=_optional("TZ", "Europe/Paris"),
         geocode_timeout=_integer("GEOCODE_TIMEOUT", 10, minimum=1, maximum=60),
-        osm_network_type=_optional("OSM_NETWORK_TYPE", "drive").lower(),
+        osm_network_type=_optional("OSM_NETWORK_TYPE", "auto").lower(),
         osm_request_timeout=_integer(
             "OSM_REQUEST_TIMEOUT", 150, minimum=30, maximum=300
         ),

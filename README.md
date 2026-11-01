@@ -162,7 +162,7 @@ default value**: Compose refuses to start if they are missing. See
 | `MAX_OUTPUT_PIXELS` | Maximum output size (default `100000000`) |
 | `POSTER_RETENTION_DAYS` | Poster retention (default `7`) |
 | `MAX_STORED_POSTERS` | Maximum stored objects (default `2000`) |
-| `OSM_NETWORK_TYPE` | OSMnx network type (default `drive`; `all` is much slower) |
+| `OSM_NETWORK_TYPE` | OSMnx network type (default `auto`: `all` ≤ 5 km, `drive` above) |
 | `OSM_REQUEST_TIMEOUT` | Overpass request timeout in seconds (default `150`) |
 | `OVERPASS_URL` | Overpass endpoint (default `https://overpass-api.de/api`) |
 | `OSM_FORCE_IPV4` | Force IPv4 for Overpass/OSMnx (default `true`) |
@@ -353,9 +353,10 @@ docker compose start
 
 The first generation for an area is dominated by Overpass. Two settings matter:
 
-- `OSM_NETWORK_TYPE=drive` (default) downloads the drivable street network.
-  `all` also downloads footpaths and cycleways and can be several times slower
-  and much larger in memory.
+- `OSM_NETWORK_TYPE=auto` (default) uses `all` up to 5 km and `drive` above.
+  This keeps small zones detailed (and avoids “no data” in pedestrian areas)
+  while large zones download the much smaller drivable network. `all` for a
+  large zone is several times slower and much larger in memory.
 - `OSM_REQUEST_TIMEOUT=150` gives large areas enough time to answer instead of
   failing on a 30-second timeout.
 
@@ -397,7 +398,7 @@ The full threat model, residual risks, and post-deployment checklist are in
 | Map tiles are blank | OSM tile service unreachable or blocked by the browser/network. Check the browser console and the OSM usage policy. |
 | “API KEY REQUIRED” on the map | An old frontend build still references CARTO tiles. Rebuild `web`: `docker compose build web && docker compose up -d web`. |
 | “My location” does nothing | The site must be served over HTTPS, and the browser must grant geolocation permission. |
-| Generation takes a long time or fails with “No map data” | Overpass/Nominatim may be slow or rate-limiting. Keep `OSM_NETWORK_TYPE=drive` (the default) instead of `all`, reduce the distance, or point `OVERPASS_URL` to a faster instance. `OSM_FORCE_IPV4=true` avoids IPv6 timeouts on VPS with broken IPv6; set it to `false` only on an IPv6-only host. The first request for an area is cached; repeats are much faster. |
+| Generation takes a long time or fails with “No map data” | Overpass/Nominatim may be slow or rate-limiting. Keep `OSM_NETWORK_TYPE=auto` (the default), reduce the distance, or point `OVERPASS_URL` to a faster instance. `OSM_FORCE_IPV4=true` avoids IPv6 timeouts on VPS with broken IPv6; set it to `false` only on an IPv6-only host. The first request for an area is cached; repeats are much faster. |
 | 413 on generate | Request body exceeds the 64 KB gateway limit. |
 | 403 on a poster URL | The signed URL expired. Reload the history or regenerate the poster. |
 

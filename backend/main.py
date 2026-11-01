@@ -35,7 +35,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from backend import storage
 from backend.celery_app import celery_app
 from backend.models import PosterRequest
-from backend.redis_client import get_redis
+from backend.redis_client import get_redis, release_active_slot
 from backend.security import (
     OBJECT_KEY_RE,
     TASK_ID_RE,
@@ -231,7 +231,7 @@ def _public_error(info: Any) -> str:
     text = str(info or "")
     lowered = text.lower()
     if "no map data" in lowered or "could not retrieve map data" in lowered:
-        return "No map data found for this area. Try a smaller distance."
+        return "Unable to download OSM data for this area. Overpass may be unavailable; please retry."
     if "time limit" in lowered or "timelimit" in lowered or "soft time" in lowered:
         return "Generation timed out. Try a smaller area or a lower DPI."
     if "nominatim" in lowered or "geocod" in lowered:
@@ -251,6 +251,11 @@ def _task_status(task_id: str, session_id: str) -> dict[str, Any]:
     if owner != session_id:
         # 404 volontaire : ne pas confirmer l'existence d'une tache d'autrui.
         raise HTTPException(status_code=404, detail="Task not found.")
+
+    def _release_slot() -> None:
+        # Idempotent avec task_postrun : libere le quota de concurrence des
+        # qu'un statut terminal est observe, meme si le signal Celery est perdu.
+        release_active_slot(client, task_id, session_id, settings.task_ttl)
 
     try:
         result = AsyncResult(task_id, app=celery_app)
@@ -274,6 +279,7 @@ def _task_status(task_id: str, session_id: str) -> dict[str, Any]:
         if created_raw:
             try:
                 if time.time() - int(created_raw) > settings.task_max_age:
+                    _release_slot()
                     return {
                         "task_id": task_id,
                         "status": "FAILURE",
@@ -302,12 +308,14 @@ def _task_status(task_id: str, session_id: str) -> dict[str, Any]:
         value = result.result
         file_key = value.get("file_key") if isinstance(value, dict) else None
         if not isinstance(file_key, str) or not OBJECT_KEY_RE.fullmatch(file_key):
+            _release_slot()
             return {
                 "task_id": task_id,
                 "status": "FAILURE",
                 "result": None,
                 "error": "Poster generation failed.",
             }
+        _release_slot()
         response["status"] = "SUCCESS"
         response["result"] = {
             "success": True,
@@ -322,10 +330,12 @@ def _task_status(task_id: str, session_id: str) -> dict[str, Any]:
         return response
 
     if state == "FAILURE":
+        _release_slot()
         response["status"] = "FAILURE"
         response["error"] = _public_error(result.info)
         return response
 
+    _release_slot()
     response["status"] = "FAILURE"
     response["error"] = "Poster generation failed."
     return response
@@ -417,7 +427,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="MapPoster Generator API",
-    version="2.3.3",
+    version="2.3.4",
     docs_url="/docs" if settings.enable_docs else None,
     redoc_url=None,
     openapi_url="/openapi.json" if settings.enable_docs else None,

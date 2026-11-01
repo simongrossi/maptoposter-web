@@ -1,7 +1,7 @@
 # Securite de MapPoster Web
 
 Ce document decrit le modele de menace, les mesures appliquees et les risques
-residuels. Il correspond a la version `2.3.3` de la stack Docker.
+residuels. Il correspond a la version `2.3.4` de la stack Docker.
 
 ## 1. Modele de menace
 

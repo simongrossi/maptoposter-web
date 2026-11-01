@@ -276,7 +276,7 @@ services:
       CELERY_QUEUE: ${CELERY_QUEUE:-celery}
       NOMINATIM_USER_AGENT: "${NOMINATIM_USER_AGENT:-MapPoster/2.3.2 (+https://github.com/simongrossi/maptoposter-web)}"
       GEOCODE_TIMEOUT: ${GEOCODE_TIMEOUT:-10}
-      OSM_NETWORK_TYPE: ${OSM_NETWORK_TYPE:-drive}
+      OSM_NETWORK_TYPE: ${OSM_NETWORK_TYPE:-auto}
       OSM_REQUEST_TIMEOUT: ${OSM_REQUEST_TIMEOUT:-150}
       OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api}
       OSM_FORCE_IPV4: ${OSM_FORCE_IPV4:-true}
