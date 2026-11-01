@@ -165,6 +165,7 @@ default value**: Compose refuses to start if they are missing. See
 | `OSM_NETWORK_TYPE` | OSMnx network type (default `drive`; `all` is much slower) |
 | `OSM_REQUEST_TIMEOUT` | Overpass request timeout in seconds (default `150`) |
 | `OVERPASS_URL` | Overpass endpoint (default `https://overpass-api.de/api`) |
+| `OSM_FORCE_IPV4` | Force IPv4 for Overpass/OSMnx (default `true`) |
 
 Advanced settings (task timeouts, worker recycle threshold, queue name,
 Nominatim user agent, Sentry, log level) are documented in `.env.example`.
@@ -362,6 +363,8 @@ OSMnx responses and the processed graph are cached under
 `/.cache/osmnx` and the worker cache volume. Repeating the same city and
 distance is therefore much faster. If `overpass-api.de` is slow from your VPS,
 set `OVERPASS_URL` to a faster Overpass instance and restart the worker.
+`OSM_FORCE_IPV4=true` (the default) prevents a broken IPv6 route from adding a
+long timeout before each request.
 
 ---
 
@@ -394,7 +397,7 @@ The full threat model, residual risks, and post-deployment checklist are in
 | Map tiles are blank | OSM tile service unreachable or blocked by the browser/network. Check the browser console and the OSM usage policy. |
 | “API KEY REQUIRED” on the map | An old frontend build still references CARTO tiles. Rebuild `web`: `docker compose build web && docker compose up -d web`. |
 | “My location” does nothing | The site must be served over HTTPS, and the browser must grant geolocation permission. |
-| Generation takes a long time or fails with “No map data” | Overpass/Nominatim may be slow or rate-limiting. Keep `OSM_NETWORK_TYPE=drive` (the default) instead of `all`, reduce the distance, or point `OVERPASS_URL` to a faster instance. The first request for an area is cached; repeats are much faster. |
+| Generation takes a long time or fails with “No map data” | Overpass/Nominatim may be slow or rate-limiting. Keep `OSM_NETWORK_TYPE=drive` (the default) instead of `all`, reduce the distance, or point `OVERPASS_URL` to a faster instance. `OSM_FORCE_IPV4=true` avoids IPv6 timeouts on VPS with broken IPv6; set it to `false` only on an IPv6-only host. The first request for an area is cached; repeats are much faster. |
 | 413 on generate | Request body exceeds the 64 KB gateway limit. |
 | 403 on a poster URL | The signed URL expired. Reload the history or regenerate the poster. |
 

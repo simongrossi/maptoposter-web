@@ -279,6 +279,7 @@ services:
       OSM_NETWORK_TYPE: ${OSM_NETWORK_TYPE:-drive}
       OSM_REQUEST_TIMEOUT: ${OSM_REQUEST_TIMEOUT:-150}
       OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api}
+      OSM_FORCE_IPV4: ${OSM_FORCE_IPV4:-true}
       CACHE_DIR: /.cache
       MPLCONFIGDIR: /.cache/matplotlib
       PYTHONUNBUFFERED: "1"

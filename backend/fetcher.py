@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
+import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -15,6 +17,18 @@ from backend.models import CustomLayer
 from backend.settings import settings
 
 logger = logging.getLogger(__name__)
+
+# Certains VPS ont un IPv6 casse : urllib3/requests tente IPv6 en premier et
+# attend le timeout avant de basculer, ce qui donne l'impression que le
+# telechargement OSM est fige. Forcer IPv4 evite cette attente.
+if settings.osm_force_ipv4:
+    try:
+        import urllib3.util.connection as _urllib3_connection
+
+        _urllib3_connection.allowed_gai_family = lambda: socket.AF_INET
+        logger.info("OSMnx/Overpass : IPv4 force")
+    except Exception as exc:  # pragma: no cover - depend d'urllib3
+        logger.warning("Impossible de forcer IPv4: %s", exc)
 
 # Cache HTTP interne d'OSMnx : il doit pointer vers un repertoire inscriptible
 # par l'utilisateur `app`, sinon chaque reponse Overpass echoue a la sauvegarde
@@ -53,8 +67,14 @@ class MapDataFetcher:
         key = MapDataFetcher._graph_cache_key(point, dist)
         cached = DiskCache.get(key)
         if cached is not None:
+            logger.info(
+                "Graphe OSM en cache (type=%s, dist=%s)",
+                settings.osm_network_type,
+                dist,
+            )
             return cached
 
+        started_at = time.monotonic()
         try:
             graph = ox.graph_from_point(
                 point,
@@ -64,9 +84,19 @@ class MapDataFetcher:
                 truncate_by_edge=True,
             )
             DiskCache.set(key, graph)
+            logger.info(
+                "Graphe OSM telecharge en %.1fs (type=%s, %s noeuds)",
+                time.monotonic() - started_at,
+                settings.osm_network_type,
+                len(graph),
+            )
             return graph
         except Exception as exc:
-            logger.warning("Echec de recuperation du graphe OSM: %s", exc)
+            logger.warning(
+                "Echec de recuperation du graphe OSM apres %.1fs: %s",
+                time.monotonic() - started_at,
+                exc,
+            )
             return None
 
     @staticmethod
@@ -78,14 +108,25 @@ class MapDataFetcher:
         if cached is not None:
             return cached
 
+        started_at = time.monotonic()
         try:
             features = ox.features_from_point(point, tags=tags, dist=dist)
             if features.empty:
                 return None
             DiskCache.set(key, features)
+            logger.info(
+                "Couche OSM %s telechargee en %.1fs",
+                name,
+                time.monotonic() - started_at,
+            )
             return features
         except Exception as exc:
-            logger.warning("Echec de recuperation des couches %s: %s", name, exc)
+            logger.warning(
+                "Echec de recuperation des couches %s apres %.1fs: %s",
+                name,
+                time.monotonic() - started_at,
+                exc,
+            )
             return None
 
     @classmethod
@@ -169,4 +210,9 @@ class MapDataFetcher:
             else:
                 data[key] = result
 
+        logger.info(
+            "Donnees OSM pretes (%s noeuds, %s couches)",
+            len(graph),
+            len(feature_tasks),
+        )
         return data

@@ -151,6 +151,7 @@ class Settings:
     osm_network_type: str
     osm_request_timeout: int
     overpass_url: str
+    osm_force_ipv4: bool
 
     # Retention
     poster_retention_days: int
@@ -312,6 +313,7 @@ def load_settings() -> Settings:
         overpass_url=_optional(
             "OVERPASS_URL", "https://overpass-api.de/api"
         ).rstrip("/"),
+        osm_force_ipv4=_boolean("OSM_FORCE_IPV4", True),
     )
 
 

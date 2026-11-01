@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, tick } from "svelte";
+    import { onDestroy, onMount, tick } from "svelte";
     import MapSelector from "$lib/components/MapSelector.svelte";
     import SidebarControls from "$lib/components/SidebarControls.svelte";
     import GenerationProgress from "$lib/components/GenerationProgress.svelte";
@@ -108,6 +108,9 @@
     let generationStart = 0;
     let smoothedEtaSeconds: number | null = null;
     let abortController: AbortController | null = null;
+    let elapsedSeconds = 0;
+    let elapsedTimer: ReturnType<typeof setInterval> | null = null;
+    let indeterminate = false;
 
     // Debounce for forward geocoding
     let searchTimeout: ReturnType<typeof setTimeout>;
@@ -156,16 +159,35 @@
     // Also update circle when distance changes (Sidebar -> Parent -> Map)
     // distance is 2-way bound. MapSelector takes {distance} prop. Svelte handles it.
 
+    function stopElapsedTimer() {
+        if (elapsedTimer) {
+            clearInterval(elapsedTimer);
+            elapsedTimer = null;
+        }
+    }
+
+    function startElapsedTimer() {
+        stopElapsedTimer();
+        elapsedSeconds = 0;
+        elapsedTimer = setInterval(() => {
+            elapsedSeconds = Math.floor((Date.now() - generationStart) / 1000);
+        }, 1000);
+    }
+
     function cancelGeneration() {
         if (abortController) {
             abortController.abort();
             abortController = null;
             loading = false;
+            indeterminate = false;
+            stopElapsedTimer();
             progressText = t.errors.generationCancelled;
             progressEtaText = "";
             smoothedEtaSeconds = null;
         }
     }
+
+    onDestroy(stopElapsedTimer);
 
     function estimateTotalSeconds() {
         const sizeFactor = Math.max(1, (width * height) / 200);
@@ -196,6 +218,8 @@
         progressEtaText = "";
         generationStart = Date.now();
         smoothedEtaSeconds = null;
+        indeterminate = false;
+        startElapsedTimer();
 
         abortController = new AbortController();
 
@@ -232,6 +256,8 @@
                         text,
                     );
 
+                indeterminate = isOsmFetch && percent < 60;
+
                 if (isOsmFetch && percent < 60) {
                     smoothedEtaSeconds = null;
                     progressEtaText =
@@ -265,6 +291,8 @@
         );
 
         loading = false;
+        indeterminate = false;
+        stopElapsedTimer();
         abortController = null;
 
         if (result.success) {
@@ -339,6 +367,10 @@
                     {progressPercent}
                     {progressText}
                     etaText={progressEtaText}
+                    {indeterminate}
+                    elapsedText={elapsedSeconds > 0
+                        ? `Temps écoulé : ${formatDuration(elapsedSeconds)}`
+                        : ""}
                     on:cancel={cancelGeneration}
                 />
             {:else}

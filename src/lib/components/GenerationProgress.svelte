@@ -5,6 +5,8 @@
     export let progressPercent = 0;
     export let progressText = "";
     export let etaText = "";
+    export let elapsedText = "";
+    export let indeterminate = false;
 
     const dispatch = createEventDispatcher();
 
@@ -21,20 +23,31 @@
 >
     <div class="progress-info">
         <span class="progress-text">{progressText}</span>
-        <span class="progress-percent">{Math.round(progressPercent)}%</span>
+        <span class="progress-percent"
+            >{indeterminate ? "…" : `${Math.round(progressPercent)}%`}</span
+        >
     </div>
     {#if etaText}
         <div class="progress-eta">{etaText}</div>
     {/if}
     <div
         class="progress-bar-bg"
+        class:indeterminate
         role="progressbar"
         aria-valuemin="0"
         aria-valuemax="100"
-        aria-valuenow={Math.round(progressPercent)}
+        aria-valuenow={indeterminate ? undefined : Math.round(progressPercent)}
+        aria-valuetext={indeterminate ? "Téléchargement en cours" : undefined}
     >
-        <div class="progress-bar-fill" style="width: {progressPercent}%"></div>
+        <div
+            class="progress-bar-fill"
+            class:indeterminate
+            style="width: {progressPercent}%"
+        ></div>
     </div>
+    {#if elapsedText}
+        <div class="progress-elapsed">{elapsedText}</div>
+    {/if}
     <button type="button" class="btn-cancel" on:click={cancel}>
         Arrêter
     </button>
@@ -87,6 +100,33 @@
         transition: width 0.3s ease-out;
     }
 
+    /* Phase OSM : pas de pourcentage fiable, on affiche une barre active. */
+    .progress-bar-bg.indeterminate {
+        position: relative;
+    }
+
+    .progress-bar-bg.indeterminate .progress-bar-fill {
+        width: 34% !important;
+        animation: indeterminate 1.4s ease-in-out infinite;
+        transition: none;
+    }
+
+    @keyframes indeterminate {
+        0% {
+            transform: translateX(-120%);
+        }
+        100% {
+            transform: translateX(320%);
+        }
+    }
+
+    .progress-elapsed {
+        margin: -4px 0 10px;
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+    }
+
     .btn-cancel {
         width: 100%;
         padding: 10px;
@@ -110,6 +150,12 @@
     @media (max-width: 768px) {
         .btn-cancel {
             min-height: 44px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .progress-bar-bg.indeterminate .progress-bar-fill {
+            animation: none;
         }
     }
 </style>
