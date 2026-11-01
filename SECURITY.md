@@ -1,7 +1,7 @@
 # Securite de MapPoster Web
 
 Ce document decrit le modele de menace, les mesures appliquees et les risques
-residuels. Il correspond a la version `2.2.0` de la stack Docker.
+residuels. Il correspond a la version `2.2.1` de la stack Docker.
 
 ## 1. Modele de menace
 
@@ -246,8 +246,11 @@ Ces risques sont acceptes ou necessitent une action d'exploitation.
     fail2ban) est recommande.
 11. **Nominatim / OSM.** Le proxy `/geocode` est limite a 10 requetes/minute,
     mais le worker peut etre bloque par Nominatim/Overpass en cas d'usage
-    intensif. Respecter les conditions d'utilisation et prevoir un fournisseur
-    de geocodage auto-heberge si necessaire.
+    intensif. Les tuiles de previsualisation sont servies par
+    `tile.openstreetmap.org` (sans cle API) : en cas de trafic important,
+    auto-heberger les tuiles ou utiliser un fournisseur dedie. Respecter les
+    conditions d'utilisation et prevoir un fournisseur de geocodage
+    auto-heberge si necessaire.
 12. **Cache pickle local.** Le cache OSM utilise `pickle` dans un volume
     accessible au worker. Une compromission du worker permet de manipuler ce
     cache ; il n'est jamais expose au client.

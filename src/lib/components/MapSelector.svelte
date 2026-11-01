@@ -17,23 +17,16 @@
     let previewRect: L.Rectangle;
     let marker: L.Marker;
     let leaflet: typeof L; // Runtime library
+    let tileTone: "standard" | "dark" | "light" = "standard";
 
     // Poster config mirroring backend default (12x16 inch = 0.75 aspect)
     const ASPECT_RATIO = 12 / 16;
 
-    const TILE_PROVIDERS: Record<string, string> = {
-        noir: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        sombre: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        minimal:
-            "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        standard: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    };
-
-    // Attributions
-    const ATTRS: Record<string, string> = {
-        standard: "&copy; OpenStreetMap contributors",
-        other: "&copy; OpenStreetMap &copy; CARTO",
-    };
+    // Tuiles de prévisualisation : OSM standard uniquement, aucune clé API.
+    // Les thèmes sombres/clair sont obtenus par un filtre CSS sur le tile pane.
+    const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+    const OSM_ATTRIBUTION =
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
 
     onMount(async () => {
         if (browser) {
@@ -57,28 +50,29 @@
     function updateTileLayer() {
         if (!map || !leaflet) return;
 
-        // Pick provider
-        let url = TILE_PROVIDERS["standard"];
-        let attr = ATTRS["standard"];
-
-        if (themeId && (themeId.includes("noir") || themeId.includes("dark"))) {
-            url = TILE_PROVIDERS["noir"];
-            attr = ATTRS["other"];
-        } else if (
-            themeId &&
+        const isDark =
+            !!themeId &&
+            (themeId.includes("noir") || themeId.includes("dark"));
+        const isLight =
+            !!themeId &&
             (themeId.includes("white") ||
                 themeId.includes("light") ||
-                themeId.includes("minimal"))
-        ) {
-            url = TILE_PROVIDERS["minimal"];
-            attr = ATTRS["other"];
-        }
+                themeId.includes("minimal"));
+
+        tileTone = isDark ? "dark" : isLight ? "light" : "standard";
 
         if (tileLayer) {
             map.removeLayer(tileLayer);
         }
 
-        tileLayer = leaflet.tileLayer(url, { attribution: attr }).addTo(map);
+        // Une seule source de tuiles, libre et sans clé. Le rendu "noir" ou
+        // "minimal" ne change que le filtre CSS, pas le fournisseur.
+        tileLayer = leaflet
+            .tileLayer(OSM_TILE_URL, {
+                attribution: OSM_ATTRIBUTION,
+                maxZoom: 19,
+            })
+            .addTo(map);
 
         // Ensure markers/rects stay on top? TileLayers usually go on background (z-index 1).
         // If needed: tileLayer.bringToBack();
@@ -270,7 +264,12 @@
     }
 </script>
 
-<div class="map-container" bind:this={mapElement}></div>
+<div
+    class="map-container"
+    class:tiles-dark={tileTone === "dark"}
+    class:tiles-light={tileTone === "light"}
+    bind:this={mapElement}
+></div>
 
 <style>
     .map-container {
@@ -281,5 +280,19 @@
         border: none;
         margin: 0;
         z-index: 1;
+    }
+
+    /* Aperçu sombre / clair sans fournisseur de tuiles payant. Le filtre ne
+       s'applique qu'au calque des tuiles, pas au marqueur ni au rectangle. */
+    .map-container :global(.leaflet-tile-pane) {
+        transition: filter 0.2s ease;
+    }
+
+    .map-container.tiles-dark :global(.leaflet-tile-pane) {
+        filter: grayscale(1) invert(1) brightness(0.85) contrast(1.15);
+    }
+
+    .map-container.tiles-light :global(.leaflet-tile-pane) {
+        filter: grayscale(1) brightness(1.05) contrast(0.9);
     }
 </style>

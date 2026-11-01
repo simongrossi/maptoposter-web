@@ -24,7 +24,14 @@ Le layout réagit aux breakpoints (`max-width: 768px`).
 
 ## 🌍 Map Tiles Logic
 
-Le composant `MapSelector` change dynamiquement de fournisseur de tuiles (TileProvider) selon le thème sélectionné par l'utilisateur pour offrir un WYSIWYG ("What You See Is What You Get") approximatif.
-- Thème `noir` -> CartoDB Dark Matter.
-- Thème `minimal` -> CartoDB Positron.
-- Thème `standard` -> OSM Standard.
+Le composant `MapSelector` utilise une seule source de tuiles, **OSM Standard**
+(`https://tile.openstreetmap.org/{z}/{x}/{y}.png`), sans clé API. Le rendu
+sombre ou clair est obtenu par un filtre CSS appliqué uniquement au calque des
+tuiles, pas au marqueur ni au rectangle de sélection.
+- Thème `noir` / sombre -> OSM + filtre `grayscale + invert`.
+- Thème `minimal` / clair -> OSM + filtre `grayscale`.
+- Thème `standard` -> OSM sans filtre.
+
+Attention à la [politique d'utilisation des tuiles OSM](https://operations.osmfoundation.org/policies/tiles/) :
+pour un trafic important, auto-héberger les tuiles ou utiliser un fournisseur
+dédié.

@@ -1,4 +1,4 @@
-# MapPoster Web v2.2.0 🌍🎨
+# MapPoster Web v2.2.1 🌍🎨
 
 **Turn any location into a stunning minimalist wall art poster.**
 
@@ -11,7 +11,7 @@ frontend and a Python/FastAPI backend with Celery execution.
 ## ✨ Features
 
 - **Global Search**: Find any city, village, or landmark worldwide.
-- **WYSIWYG Preview**: Interactive map with real-time vector tile preview matching your theme.
+- **WYSIWYG Preview**: Interactive OpenStreetMap preview with a dark/light CSS filter matching your theme. No tile API key.
 - **Artistic Themes**: 17 built-in styles (Noir, Minimal, Blueprint, Sunset, ...) + **Custom Colors**.
 - **High Resolution**: Print-ready PNG, SVG, or PDF exports up to 600 DPI.
 - **Custom Layers**: Toggle cycle paths, subways, railways, rivers, forests, ...
@@ -278,4 +278,4 @@ Developed by **Simon Grossi**.
 
 MIT License.
 Data © OpenStreetMap contributors.
-Map tiles © CartoDB & OpenStreetMap.
+Map tiles © OpenStreetMap contributors.

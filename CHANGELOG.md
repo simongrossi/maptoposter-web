@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-11-01
+
+### Fixed
+- **Preview map tiles**: removed the CARTO Dark Matter / Positron tile
+  providers, which now require an API key (`API KEY REQUIRED` watermark). The
+  preview uses OpenStreetMap Standard tiles only, with a CSS filter on the tile
+  pane for dark/light themes. No tile API key is needed.
+- Updated the preview attribution and documentation accordingly.
+
 ## [2.2.0] - 2026-11-01
 
 **Security hardening and VPS deployment.**
